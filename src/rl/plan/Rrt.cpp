@@ -32,6 +32,7 @@
 #include "Verifier.h"
 #include "Viewer.h"
 
+
 #if _MSC_VER < 1600
 #define nullptr NULL // TODO
 #endif

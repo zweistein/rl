@@ -55,6 +55,7 @@
 #include <rl/plan/PrmUtilityGuided.h>
 #include <rl/plan/RecursiveVerifier.h>
 #include <rl/plan/Rrt.h>
+#include <rl/plan/Est.h>
 #include <rl/plan/RrtCon.h>
 #include <rl/plan/RrtConCon.h>
 #include <rl/plan/RrtDual.h>
@@ -1070,7 +1071,7 @@ MainWindow::load(const QString& filename)
 		this->optimizer->verifier = this->verifier2.get();
 	}
 	
-	rl::xml::Object planner = path.eval("//addRrtConCon|//eet|//prm|//prmUtilityGuided|//rrt|//rrtCon|//rrtConCon|//rrtConExt|//rrtDual|//rrtGoalBias|//rrtExtCon|//rrtExtExt");
+	rl::xml::Object planner = path.eval("//addRrtConCon|//eet|//prm|//prmUtilityGuided|//rrt|//rrtCon|//rrtConCon|//rrtConExt|//rrtDual|//rrtGoalBias|//rrtExtCon|//rrtExtExt|//est");
 	
 	if ("addRrtConCon" == planner.getNodeTab(0).getName())
 	{
@@ -1316,6 +1317,27 @@ MainWindow::load(const QString& filename)
 		
 		rrt->kd = path.eval("count(bruteForce) > 0", planner.getNodeTab(0)).getBoolval() ? false : true;
 		rrt->sampler = this->sampler.get();
+	}
+	else if ("est" == planner.getNodeTab(0).getName())
+	{
+		this->planner = boost::make_shared< rl::plan::Est >();
+		rl::plan::Est* est = static_cast< rl::plan::Est* >(this->planner.get());
+		est->delta = path.eval("number(delta)", planner.getNodeTab(0)).getFloatval(1.0f);
+		
+		if ("deg" == path.eval("string(delta/@unit)", planner.getNodeTab(0)).getStringval())
+		{
+			est->delta *= rl::math::DEG2RAD;
+		}
+		
+		est->epsilon = path.eval("number(epsilon)", planner.getNodeTab(0)).getFloatval(1.0e-3f);
+		
+		if ("deg" == path.eval("string(epsilon/@unit)", planner.getNodeTab(0)).getStringval())
+		{
+			est->epsilon *= rl::math::DEG2RAD;
+		}
+		
+		est->kd = path.eval("count(bruteForce) > 0", planner.getNodeTab(0)).getBoolval() ? false : true;
+		est->sampler = this->sampler.get();
 	}
 	else if ("rrtCon" == planner.getNodeTab(0).getName())
 	{

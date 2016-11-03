@@ -23,6 +23,7 @@ set(
 	RealList.h
 	RecursiveVerifier.h
 	Rrt.h
+	Est.h
 	RrtCon.h
 	RrtConCon.h
 	RrtDual.h
@@ -62,6 +63,7 @@ set(
 	PrmUtilityGuided.cpp
 	RecursiveVerifier.cpp
 	Rrt.cpp
+	Est.cpp
 	RrtCon.cpp
 	RrtConCon.cpp
 	RrtDual.cpp
