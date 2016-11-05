@@ -61,15 +61,15 @@ namespace rl
 
       Vertex chosenVertex = this->begin[0];
       ::rl::math::Real stepSize = 0.01;
+
+      ::rl::math::Vector chosenSample(this->model->getDof());
       
       while (timer.elapsed() < this->duration)
-      // while (true)
       {
-        // std::cout << "loop" << std::endl;
+        int steps = 0;
         ::rl::math::Vector nextStep(*this->tree[0][chosenVertex].q);
         while (!this->model->isColliding())
         {
-          // std::cout << "extend" << std::endl;
           float angle = distr(gen);
           ::rl::math::Real stepX = ::std::cos(angle) * stepSize;
           ::rl::math::Real stepY = ::std::sin(angle) * stepSize; 
@@ -78,24 +78,29 @@ namespace rl
 
           this->model->setPosition(nextStep);
           this->model->updateFrames();
+          steps++;
         }
 
-        Vertex collision_vertex = this->addVertex(this->tree[0], ::boost::make_shared< ::rl::math::Vector >(nextStep));
-        this->addEdge(chosenVertex, collision_vertex, this->tree[0]);
-
-        // try to connect the new vertex to the goal
-        Neighbor nearest;
-        nearest.first = collision_vertex;
-        nearest.second = this->model->transformedDistance(*this->tree[0][collision_vertex].q, *this->goal);
-
-        Vertex connected = this->connect(this->tree[0], nearest, *this->goal);
-
-        if (NULL != connected)
+        // check if we actually moved through some free space
+        if (steps > 1) 
         {
-          if (this->areEqual(*this->tree[0][connected].q, *this->goal)) 
+          Vertex collision_vertex = this->addVertex(this->tree[0], ::boost::make_shared< ::rl::math::Vector >(nextStep));
+          this->addEdge(chosenVertex, collision_vertex, this->tree[0]);          
+          
+          // try to connect the new vertex to the goal
+          Neighbor nearest;
+          nearest.first = collision_vertex;
+          nearest.second = this->model->transformedDistance(*this->tree[0][collision_vertex].q, *this->goal);
+
+          Vertex connected = this->connect(this->tree[0], nearest, *this->goal);
+
+          if (NULL != connected)
           {
-            this->end[0] = connected;
-            return true;
+            if (this->areEqual(*this->tree[0][connected].q, *this->goal)) 
+            {
+              this->end[0] = connected;
+              return true;
+            }
           }
         }
 
@@ -103,36 +108,17 @@ namespace rl
         this->model->setPosition(*this->tree[0][this->begin[0]].q);
         this->model->updateFrames();
 
-        chosenVertex = ::boost::random_vertex(this->tree[0], gen);
+        // choose new vertex randomly
+        // chosenVertex = ::boost::random_vertex(this->tree[0], gen);
         
+        // choose new vertex using Voronoi bias
+        this->choose(chosenSample);
+        chosenVertex = this->nearest(this->tree[0], chosenSample).first;
+
         timer.stop();
       }
       
       return false;
     }
-
-    // Vertex* Est::chooseVertex(Tree& tree)
-    // {
-      // choose a random vertex from the tree
-
-      // return *this->begin[0];
-
-      // Vertex ret;
-
-      // size_t num_vertices = ::boost::num_vertices(tree);
-      // ::boost::random::mt19937 gen;
-      // ::boost::random::uniform_int_distribution<> distr(0, num_vertices-1);
-      // int idx = distr(gen);
-
-      // VertexIteratorPair vip = ::boost::vertices(tree);
-      // for (int i = 0; i < idx; i++)
-      // {
-      //   ret = *vip.first;
-      //   vip.first++;
-      // }
-
-      // return &(vip.first);
-      // return tree[ret];
-    // }
   }
 }
