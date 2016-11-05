@@ -24,16 +24,115 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <boost/make_shared.hpp>
+#include <boost/random.hpp>
+#include <boost/graph/random.hpp>
+
+#include <rl/math/Vector.h>
+
 #include "Est.h"
+#include "SimpleModel.h"
 
 #include <iostream>
+#include <math.h>
 
 namespace rl
 {
   namespace plan
   {
-    Est::Est() {
-      ::std::cout << "Hello" << ::std::endl;
-    } 
+    Est::Est() : Rrt() {}
+
+    ::std::string 
+    Est::getName() const 
+    {
+      return "EST";
+    }
+
+    bool Est::solve() 
+    {
+      ::std::cout << "Est solve!" << ::std::endl;
+      this->begin[0] = this->addVertex(this->tree[0], ::boost::make_shared< ::rl::math::Vector >(*this->start));
+      
+      boost::random::mt19937 gen;
+      boost::random::uniform_real_distribution<> distr(0, 2*M_PI);
+
+      timer.start();
+      timer.stop();
+
+      Vertex chosenVertex = this->begin[0];
+      ::rl::math::Real stepSize = 0.01;
+      
+      while (timer.elapsed() < this->duration)
+      // while (true)
+      {
+        // std::cout << "loop" << std::endl;
+        ::rl::math::Vector nextStep(*this->tree[0][chosenVertex].q);
+        while (!this->model->isColliding())
+        {
+          // std::cout << "extend" << std::endl;
+          float angle = distr(gen);
+          ::rl::math::Real stepX = ::std::cos(angle) * stepSize;
+          ::rl::math::Real stepY = ::std::sin(angle) * stepSize; 
+          nextStep[0] += stepX;
+          nextStep[1] += stepY;
+
+          this->model->setPosition(nextStep);
+          this->model->updateFrames();
+        }
+
+        Vertex collision_vertex = this->addVertex(this->tree[0], ::boost::make_shared< ::rl::math::Vector >(nextStep));
+        this->addEdge(chosenVertex, collision_vertex, this->tree[0]);
+
+        // try to connect the new vertex to the goal
+        Neighbor nearest;
+        nearest.first = collision_vertex;
+        nearest.second = this->model->transformedDistance(*this->tree[0][collision_vertex].q, *this->goal);
+
+        Vertex connected = this->connect(this->tree[0], nearest, *this->goal);
+
+        if (NULL != connected)
+        {
+          if (this->areEqual(*this->tree[0][connected].q, *this->goal)) 
+          {
+            this->end[0] = connected;
+            return true;
+          }
+        }
+
+        // reset model to initial position, which should be collision-free
+        this->model->setPosition(*this->tree[0][this->begin[0]].q);
+        this->model->updateFrames();
+
+        chosenVertex = ::boost::random_vertex(this->tree[0], gen);
+        
+        timer.stop();
+      }
+      
+      return false;
+    }
+
+    // Vertex* Est::chooseVertex(Tree& tree)
+    // {
+      // choose a random vertex from the tree
+
+      // return *this->begin[0];
+
+      // Vertex ret;
+
+      // size_t num_vertices = ::boost::num_vertices(tree);
+      // ::boost::random::mt19937 gen;
+      // ::boost::random::uniform_int_distribution<> distr(0, num_vertices-1);
+      // int idx = distr(gen);
+
+      // VertexIteratorPair vip = ::boost::vertices(tree);
+      // for (int i = 0; i < idx; i++)
+      // {
+      //   ret = *vip.first;
+      //   vip.first++;
+      // }
+
+      // return &(vip.first);
+      // return tree[ret];
+    // }
   }
 }

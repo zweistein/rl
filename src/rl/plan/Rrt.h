@@ -43,6 +43,7 @@ namespace rl
 		class Model;
 		class Sampler;
 		class Verifier;
+		struct Vertex;
 		
 		/**
 		 * Rapidly-Exploring Random Trees.

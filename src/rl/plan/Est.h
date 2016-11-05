@@ -39,6 +39,13 @@ namespace rl
     class Est : public Rrt {
     public:
       Est();
+
+      ::std::string getName() const;
+
+      bool solve();
+      // rl::plan::Vertex connect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen);
+      // rl::plan::Vertex* Est::chooseVertex(Tree& tree);
+
     };
   }
 }
