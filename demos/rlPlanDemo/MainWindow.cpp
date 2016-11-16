@@ -1321,8 +1321,11 @@ MainWindow::load(const QString& filename)
 	else if ("est" == planner.getNodeTab(0).getName())
 	{
 		this->planner = boost::make_shared< rl::plan::Est >();
-		rl::plan::Est* est = static_cast< rl::plan::Est* >(this->planner.get());
+		rl::plan::Est* est = static_cast< rl::plan::Est* >(this->planner.get()); 
 		est->delta = path.eval("number(delta)", planner.getNodeTab(0)).getFloatval(1.0f);
+		est->stepUncertainty = path.eval("number(stepUncertainty)", planner.getNodeTab(0)).getFloatval(0.01f);
+		est->uncertaintyThreshold = path.eval("number(uncertaintyThreshold)", planner.getNodeTab(0)).getFloatval(2.0f);
+		est->nrPossibleGoals = (int) path.eval("number(nrPossibleGoals)", planner.getNodeTab(0)).getFloatval(10.0f);
 		
 		if ("deg" == path.eval("string(delta/@unit)", planner.getNodeTab(0)).getStringval())
 		{

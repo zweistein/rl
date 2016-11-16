@@ -40,8 +40,6 @@ namespace rl
 {
   namespace plan
   {
-    Est::Est() : Rrt() {}
-
     ::std::string 
     Est::getName() const 
     {
@@ -53,6 +51,7 @@ namespace rl
       ::rl::math::Real distance = nearest.second;
       ::rl::math::Real step = distance;
       
+
       bool reached = false;
       
       if (step <= this->delta)
@@ -134,12 +133,7 @@ namespace rl
       timer.start();
       timer.stop();
 
-
-      // some parameters
-      ::rl::math::Real stepSize = 0.01;
-      ::rl::math::Real stepUncertainty = 0.01;
-      ::rl::math::Real uncertaintyTreshold = 2.0;
-      int nrPossibleGoals = 10;
+      std::cout << this->uncertaintyThreshold << std::endl;
 
       // store possible goals in here
       ::std::vector<PossibleGoal> possibleGoals;
@@ -155,13 +149,13 @@ namespace rl
         ::rl::math::Vector nextStep(*this->tree[0][chosenVertex].q);
         
         float angle = distr(gen);
-        ::rl::math::Real stepX = ::std::cos(angle) * stepSize;
-        ::rl::math::Real stepY = ::std::sin(angle) * stepSize; 
+        ::rl::math::Real stepX = ::std::cos(angle) * this->delta;
+        ::rl::math::Real stepY = ::std::sin(angle) * this->delta; 
         
         ::rl::math::Real uncertainty = 0.0;
 
         // move into sampled direction until we collide
-        while (!this->model->isColliding() && uncertainty < uncertaintyTreshold)
+        while (!this->model->isColliding() && uncertainty < this->uncertaintyThreshold)
         {
           nextStep[0] += stepX;
           nextStep[1] += stepY;
@@ -170,17 +164,11 @@ namespace rl
           this->model->updateFrames();
           steps++;
           // right now simply add up uncertainty
-          uncertainty += stepUncertainty;
+          uncertainty += this->stepUncertainty;
         }
 
-        // if (uncertainty < uncertaintyTreshold)
-        // {
-        //   // we have a collision, so reset uncertainty
-        //   uncertainty = 0.0;
-        // }
-
         // check if we actually moved through some free space and if we didn't exceed the uncertainty threshold
-        if (steps > 1 && uncertainty < uncertaintyTreshold) 
+        if (steps > 1 && uncertainty < this->uncertaintyThreshold) 
         {
           // we had a collision, so reset uncertainty
           uncertainty = 0.0;
@@ -205,7 +193,7 @@ namespace rl
             if (this->areEqual(*possibleGoal.q, *this->goal)) 
             {
               // calculate the uncertainty in the connected goal vertex by multiplying it with the connect distance
-              possibleGoal.uncertainty = nearest.second / stepSize * stepUncertainty;
+              possibleGoal.uncertainty = nearest.second / this->delta * this->stepUncertainty;
               ::std::cout 
                 << "reached goal with uncertainty of " 
                 << possibleGoal.uncertainty 
@@ -215,7 +203,7 @@ namespace rl
               possibleGoals.push_back(possibleGoal);
 
               // check if we have collected enough possible goals
-              if (possibleGoals.size() == nrPossibleGoals) {
+              if (possibleGoals.size() == this->nrPossibleGoals) {
                 // find the goal vertex with the lowest uncertainty
                 PossibleGoal *bestGoal = &possibleGoals[0];
                 for (int i = 1; i < possibleGoals.size(); ++i)

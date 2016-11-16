@@ -38,11 +38,14 @@ namespace rl
      */
     class Est : public Rrt {
     public:
-      Est();
 
       ::std::string getName() const;
-      virtual VectorPtr tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen);
-      virtual bool solve();
+
+      // configuration values
+      ::rl::math::Real stepUncertainty;
+      ::rl::math::Real uncertaintyThreshold;
+      int nrPossibleGoals;
+      
     protected:
       struct PossibleGoal
       {
@@ -50,6 +53,12 @@ namespace rl
         Neighbor neighbor;
         ::rl::math::Real uncertainty;
       };
+      
+      virtual VectorPtr tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen);
+      virtual bool solve();
+
+    private:
+
     };
 
   }

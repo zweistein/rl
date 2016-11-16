@@ -32,6 +32,8 @@
 #include "Verifier.h"
 #include "Viewer.h"
 
+#include <iostream>
+
 
 #if _MSC_VER < 1600
 #define nullptr NULL // TODO
@@ -51,6 +53,7 @@ namespace rl
 			end(trees, NULL),
 			tree(trees)
 		{
+			std::cout << "rrt constr" << std::endl;
 		}
 		
 		Rrt::~Rrt()
