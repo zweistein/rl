@@ -88,6 +88,8 @@ namespace rl
 				::rl::math::Real radius;
 				
 				TransformPtr t;
+
+				::rl::math::Real uncertainty;
 			};
 			
 			struct TreeBundle;

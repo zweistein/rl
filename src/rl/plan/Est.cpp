@@ -48,6 +48,81 @@ namespace rl
       return "EST";
     }
 
+    VectorPtr Est::tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen)
+    {
+      ::rl::math::Real distance = nearest.second;
+      ::rl::math::Real step = distance;
+      
+      bool reached = false;
+      
+      if (step <= this->delta)
+      {
+        reached = true;
+      }
+      else
+      {
+        step = this->delta;
+      }
+      
+      VectorPtr last = ::boost::make_shared< ::rl::math::Vector >(this->model->getDof());
+      
+      this->model->interpolate(*tree[nearest.first].q, chosen, step / distance, *last);
+      
+      if (NULL != this->viewer)
+      {
+//        this->viewer->drawConfiguration(*last);
+      }
+      
+      this->model->setPosition(*last);
+      this->model->updateFrames();
+      
+      if (this->model->isColliding())
+      {
+        // return NULL;
+        return VectorPtr();
+      }
+      
+      ::rl::math::Vector next(this->model->getDof());
+      
+      while (!reached)
+      {
+        distance = this->model->distance(*last, chosen);
+        step = distance;
+        
+        if (step <= this->delta)
+        {
+          reached = true;
+        }
+        else
+        {
+          step = this->delta;
+        }
+        
+        this->model->interpolate(*last, chosen, step / distance, next);
+        
+        if (NULL != this->viewer)
+        {
+//          this->viewer->drawConfiguration(next);
+        }
+        
+        this->model->setPosition(next);
+        this->model->updateFrames();
+        
+        if (this->model->isColliding())
+        {
+          break;
+        }
+        
+        *last = next;
+      }
+      
+      return last;
+
+      // Vertex connected = this->addVertex(tree, last);
+      // this->addEdge(nearest.first, connected, tree);
+      // return connected;
+    }
+
     bool Est::solve() 
     {
       ::std::cout << "Est solve!" << ::std::endl;
@@ -59,11 +134,21 @@ namespace rl
       timer.start();
       timer.stop();
 
-      Vertex chosenVertex = this->begin[0];
+
+      // some parameters
       ::rl::math::Real stepSize = 0.01;
+      ::rl::math::Real stepUncertainty = 0.01;
+      ::rl::math::Real uncertaintyTreshold = 2.0;
+      int nrPossibleGoals = 10;
+
+      // store possible goals in here
+      ::std::vector<PossibleGoal> possibleGoals;
 
       ::rl::math::Vector chosenSample(this->model->getDof());
       
+      Vertex chosenVertex = this->begin[0];
+      
+      // main loop
       while (timer.elapsed() < this->duration)
       {
         int steps = 0;
@@ -73,7 +158,10 @@ namespace rl
         ::rl::math::Real stepX = ::std::cos(angle) * stepSize;
         ::rl::math::Real stepY = ::std::sin(angle) * stepSize; 
         
-        while (!this->model->isColliding())
+        ::rl::math::Real uncertainty = 0.0;
+
+        // move into sampled direction until we collide
+        while (!this->model->isColliding() && uncertainty < uncertaintyTreshold)
         {
           nextStep[0] += stepX;
           nextStep[1] += stepY;
@@ -81,27 +169,68 @@ namespace rl
           this->model->setPosition(nextStep);
           this->model->updateFrames();
           steps++;
+          // right now simply add up uncertainty
+          uncertainty += stepUncertainty;
         }
 
-        // check if we actually moved through some free space
-        if (steps > 1) 
+        // if (uncertainty < uncertaintyTreshold)
+        // {
+        //   // we have a collision, so reset uncertainty
+        //   uncertainty = 0.0;
+        // }
+
+        // check if we actually moved through some free space and if we didn't exceed the uncertainty threshold
+        if (steps > 1 && uncertainty < uncertaintyTreshold) 
         {
+          // we had a collision, so reset uncertainty
+          uncertainty = 0.0;
+
           Vertex collision_vertex = this->addVertex(this->tree[0], ::boost::make_shared< ::rl::math::Vector >(nextStep));
-          this->addEdge(chosenVertex, collision_vertex, this->tree[0]);          
+          this->addEdge(chosenVertex, collision_vertex, this->tree[0]);
+
+          // store the uncertainty in vertex
+          this->tree[0][collision_vertex].uncertainty = uncertainty;
           
           // try to connect the new vertex to the goal
           Neighbor nearest;
           nearest.first = collision_vertex;
           nearest.second = this->model->transformedDistance(*this->tree[0][collision_vertex].q, *this->goal);
 
-          Vertex connected = this->connect(this->tree[0], nearest, *this->goal);
+          PossibleGoal possibleGoal;
+          possibleGoal.neighbor = nearest;
+          possibleGoal.q = this->tryConnect(this->tree[0], nearest, *this->goal);
 
-          if (NULL != connected)
+          if (NULL != possibleGoal.q)
           {
-            if (this->areEqual(*this->tree[0][connected].q, *this->goal)) 
+            if (this->areEqual(*possibleGoal.q, *this->goal)) 
             {
-              this->end[0] = connected;
-              return true;
+              // calculate the uncertainty in the connected goal vertex by multiplying it with the connect distance
+              possibleGoal.uncertainty = nearest.second / stepSize * stepUncertainty;
+              ::std::cout 
+                << "reached goal with uncertainty of " 
+                << possibleGoal.uncertainty 
+                << " (" << nearest.second << ")" 
+                << ::std::endl;
+              // save the vertex as one possible solution
+              possibleGoals.push_back(possibleGoal);
+
+              // check if we have collected enough possible goals
+              if (possibleGoals.size() == nrPossibleGoals) {
+                // find the goal vertex with the lowest uncertainty
+                PossibleGoal *bestGoal = &possibleGoals[0];
+                for (int i = 1; i < possibleGoals.size(); ++i)
+                {
+                  if (possibleGoals[i].uncertainty < bestGoal->uncertainty)
+                  {
+                    bestGoal = &possibleGoals[i];
+                  }
+                }
+                // found the best goal, finally add a vertex and edge for it
+                Vertex connected = this->addVertex(this->tree[0], bestGoal->q);
+                this->addEdge(bestGoal->neighbor.first, connected, this->tree[0]);
+                this->end[0] = connected;
+                return true;
+              }
             }
           }
         }

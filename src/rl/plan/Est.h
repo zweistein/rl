@@ -41,12 +41,17 @@ namespace rl
       Est();
 
       ::std::string getName() const;
-
-      bool solve();
-      // rl::plan::Vertex connect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen);
-      // rl::plan::Vertex* Est::chooseVertex(Tree& tree);
-
+      virtual VectorPtr tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen);
+      virtual bool solve();
+    protected:
+      struct PossibleGoal
+      {
+        VectorPtr q;
+        Neighbor neighbor;
+        ::rl::math::Real uncertainty;
+      };
     };
+
   }
 }
 
