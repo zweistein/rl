@@ -68,11 +68,13 @@ namespace rl
       {
         int steps = 0;
         ::rl::math::Vector nextStep(*this->tree[0][chosenVertex].q);
+        
+        float angle = distr(gen);
+        ::rl::math::Real stepX = ::std::cos(angle) * stepSize;
+        ::rl::math::Real stepY = ::std::sin(angle) * stepSize; 
+        
         while (!this->model->isColliding())
         {
-          float angle = distr(gen);
-          ::rl::math::Real stepX = ::std::cos(angle) * stepSize;
-          ::rl::math::Real stepY = ::std::sin(angle) * stepSize; 
           nextStep[0] += stepX;
           nextStep[1] += stepY;
 
@@ -110,7 +112,7 @@ namespace rl
 
         // choose new vertex randomly
         // chosenVertex = ::boost::random_vertex(this->tree[0], gen);
-        
+
         // choose new vertex using Voronoi bias
         this->choose(chosenSample);
         chosenVertex = this->nearest(this->tree[0], chosenSample).first;
