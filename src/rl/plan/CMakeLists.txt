@@ -24,6 +24,7 @@ set(
 	RecursiveVerifier.h
 	Rrt.h
 	Est.h
+	PcRrt.h
 	RrtCon.h
 	RrtConCon.h
 	RrtDual.h
@@ -64,6 +65,7 @@ set(
 	RecursiveVerifier.cpp
 	Rrt.cpp
 	Est.cpp
+	PcRrt.cpp
 	RrtCon.cpp
 	RrtConCon.cpp
 	RrtDual.cpp

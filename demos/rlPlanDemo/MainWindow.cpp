@@ -56,6 +56,7 @@
 #include <rl/plan/RecursiveVerifier.h>
 #include <rl/plan/Rrt.h>
 #include <rl/plan/Est.h>
+#include <rl/plan/PcRrt.h>
 #include <rl/plan/RrtCon.h>
 #include <rl/plan/RrtConCon.h>
 #include <rl/plan/RrtDual.h>
@@ -1071,7 +1072,7 @@ MainWindow::load(const QString& filename)
 		this->optimizer->verifier = this->verifier2.get();
 	}
 	
-	rl::xml::Object planner = path.eval("//addRrtConCon|//eet|//prm|//prmUtilityGuided|//rrt|//rrtCon|//rrtConCon|//rrtConExt|//rrtDual|//rrtGoalBias|//rrtExtCon|//rrtExtExt|//est");
+	rl::xml::Object planner = path.eval("//addRrtConCon|//eet|//prm|//prmUtilityGuided|//rrt|//rrtCon|//rrtConCon|//rrtConExt|//rrtDual|//rrtGoalBias|//rrtExtCon|//rrtExtExt|//est|//pcRrt");
 	
 	if ("addRrtConCon" == planner.getNodeTab(0).getName())
 	{
@@ -1326,6 +1327,27 @@ MainWindow::load(const QString& filename)
 		est->stepUncertainty = path.eval("number(stepUncertainty)", planner.getNodeTab(0)).getFloatval(0.01f);
 		est->uncertaintyThreshold = path.eval("number(uncertaintyThreshold)", planner.getNodeTab(0)).getFloatval(2.0f);
 		est->nrPossibleGoals = (int) path.eval("number(nrPossibleGoals)", planner.getNodeTab(0)).getFloatval(10.0f);
+		
+		if ("deg" == path.eval("string(delta/@unit)", planner.getNodeTab(0)).getStringval())
+		{
+			est->delta *= rl::math::DEG2RAD;
+		}
+		
+		est->epsilon = path.eval("number(epsilon)", planner.getNodeTab(0)).getFloatval(1.0e-3f);
+		
+		if ("deg" == path.eval("string(epsilon/@unit)", planner.getNodeTab(0)).getStringval())
+		{
+			est->epsilon *= rl::math::DEG2RAD;
+		}
+		
+		est->kd = path.eval("count(bruteForce) > 0", planner.getNodeTab(0)).getBoolval() ? false : true;
+		est->sampler = this->sampler.get();
+	}
+	else if ("pcRrt" == planner.getNodeTab(0).getName())
+	{
+		this->planner = boost::make_shared< rl::plan::PcRrt >();
+		rl::plan::PcRrt* est = static_cast< rl::plan::PcRrt* >(this->planner.get()); 
+		est->delta = path.eval("number(delta)", planner.getNodeTab(0)).getFloatval(1.0f);
 		
 		if ("deg" == path.eval("string(delta/@unit)", planner.getNodeTab(0)).getStringval())
 		{
