@@ -89,7 +89,10 @@ namespace rl
 				
 				TransformPtr t;
 
+				// added for Est
 				::rl::math::Real uncertainty;
+				// added for PcRrt
+				::rl::math::Matrix covariance;
 			};
 			
 			struct TreeBundle;

@@ -76,6 +76,8 @@
 #include <rl/xml/Object.h>
 #include <rl/xml/Path.h>
 
+#include <iostream>
+
 #ifdef RL_SG_HAVE_BULLET
 #include <rl/sg/bullet/Scene.h>
 #endif // RL_SG_HAVE_BULLET
@@ -1346,23 +1348,25 @@ MainWindow::load(const QString& filename)
 	else if ("pcRrt" == planner.getNodeTab(0).getName())
 	{
 		this->planner = boost::make_shared< rl::plan::PcRrt >();
-		rl::plan::PcRrt* est = static_cast< rl::plan::PcRrt* >(this->planner.get()); 
-		est->delta = path.eval("number(delta)", planner.getNodeTab(0)).getFloatval(1.0f);
+		rl::plan::PcRrt* pcRrt = static_cast< rl::plan::PcRrt* >(this->planner.get()); 
+		pcRrt->delta = path.eval("number(delta)", planner.getNodeTab(0)).getFloatval(1.0f);
 		
 		if ("deg" == path.eval("string(delta/@unit)", planner.getNodeTab(0)).getStringval())
 		{
-			est->delta *= rl::math::DEG2RAD;
+			pcRrt->delta *= rl::math::DEG2RAD;
 		}
 		
-		est->epsilon = path.eval("number(epsilon)", planner.getNodeTab(0)).getFloatval(1.0e-3f);
+		pcRrt->nrParticles = (int) path.eval("number(nrParticles)", planner.getNodeTab(0)).getFloatval(50.0f);
+		pcRrt->epsilon = path.eval("number(epsilon)", planner.getNodeTab(0)).getFloatval(1.0e-3f);
+
 		
 		if ("deg" == path.eval("string(epsilon/@unit)", planner.getNodeTab(0)).getStringval())
 		{
-			est->epsilon *= rl::math::DEG2RAD;
+			pcRrt->epsilon *= rl::math::DEG2RAD;
 		}
 		
-		est->kd = path.eval("count(bruteForce) > 0", planner.getNodeTab(0)).getBoolval() ? false : true;
-		est->sampler = this->sampler.get();
+		pcRrt->kd = path.eval("count(bruteForce) > 0", planner.getNodeTab(0)).getBoolval() ? false : true;
+		pcRrt->sampler = this->sampler.get();
 	}
 	else if ("rrtCon" == planner.getNodeTab(0).getName())
 	{
