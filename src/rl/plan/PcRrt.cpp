@@ -90,7 +90,9 @@ namespace rl
           possibleGoal.neighbor = nearest;
           possibleGoal.q = this->tryConnect(this->tree[0], nearest, *this->goal);
 
-          if (NULL != possibleGoal.q && this->areEqual(*possibleGoal.q, *this->goal)) {
+          ::rl::math::Matrix goalParticles;
+          if (NULL != possibleGoal.q && this->areEqual(*possibleGoal.q, *this->goal) && this->sampleGoalParticles(newVertex, *this->goal, this->nrParticles, goalParticles)) {
+            this->drawParticles(goalParticles);
             Vertex connected = this->addVertex(this->tree[0], possibleGoal.q);
             this->addEdge(possibleGoal.neighbor.first, connected, this->tree[0]);
             this->end[0] = connected;
@@ -213,9 +215,8 @@ namespace rl
 
     bool PcRrt::sampleParticles(const Vertex& start, float angle, int nrParticles, ::rl::math::Matrix& particles)
     {
-      boost::random::normal_distribution<> distr(angle, 10*M_PI/360);
+      boost::random::normal_distribution<> distr(angle, this->angleVariance);
 
-      
       particles.resize(nrParticles, this->model->getDof());
 
       int fails = 0;
@@ -227,10 +228,9 @@ namespace rl
 
       while (rowIdx < nrParticles)
       {
+        // Particle nextStep(*this->tree[0][start].q);
         Particle nextStep(this->model->getDof());
         this->tree[0][start].gState->sample(nextStep);
-
-        std::cout << nextStep << std::endl;
 
         ::rl::math::Real noisyAngle = distr(*this->gen);
         ::rl::math::Real stepX = ::std::cos(noisyAngle) * this->delta;
@@ -275,6 +275,53 @@ namespace rl
           }
         }
       }
+      return true;
+    }
+
+    bool PcRrt::sampleGoalParticles(const Vertex& start, ::rl::math::Vector& goal, int nrParticles, ::rl::math::Matrix& particles)
+    {
+      particles.resize(nrParticles, this->model->getDof());
+
+      ::rl::math::Vector startVec = *this->tree[0][start].q;
+      ::rl::math::Vector dir = goal - startVec;
+      ::rl::math::Real angle = ::std::atan2(dir[1], dir[0]) - ::std::atan2(0, 1);
+
+      ::rl::math::Vector nextStep(startVec);
+
+      int stepsToGo = 0;
+      ::rl::math::Real stepX = ::std::cos(angle) * this->delta/4;
+      ::rl::math::Real stepY = ::std::sin(angle) * this->delta/4;
+      while (!this->areEqual(nextStep, goal))
+      {
+        nextStep[0] += stepX;
+        nextStep[1] += stepY;
+        stepsToGo++;
+      }
+
+      boost::random::normal_distribution<> angleDistr(angle, this->angleVariance);
+      boost::random::normal_distribution<> stepDistr(0.0, this->stepVariance);
+
+      int rowIdx = 0;
+
+      while (rowIdx < nrParticles)
+      {
+        // ::rl::math::Vector nextStep(startVec);
+        Particle nextStep(this->model->getDof());
+        this->tree[0][start].gState->sample(nextStep);
+
+        ::rl::math::Real noisyAngle = angleDistr(*this->gen);
+        ::rl::math::Real stepX = ::std::cos(noisyAngle) * this->delta/4;
+        ::rl::math::Real stepY = ::std::sin(noisyAngle) * this->delta/4;
+        for (int step = 0; step < stepsToGo; step++)
+        {
+          nextStep[0] += stepX + stepDistr(*this->gen);
+          nextStep[1] += stepY + stepDistr(*this->gen);
+        }
+        particles.row(rowIdx) = nextStep;
+
+        rowIdx++;
+      }
+
       return true;
     }
     

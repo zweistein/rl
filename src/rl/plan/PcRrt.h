@@ -55,12 +55,15 @@ namespace rl
       ::std::string getName() const;
 
       int nrParticles;
+      ::rl::math::Real angleVariance;
+      ::rl::math::Real stepVariance;
       // ::boost::shared_ptr<::rl::sg::Scene> solidScene;
       ::rl::sg::solid::Scene *solidScene;
       
     protected:
       virtual bool solve();
       bool sampleParticles(const Vertex& start, float angle, int nrParticles, ::rl::math::Matrix& particles);
+      bool sampleGoalParticles(const Vertex& start, ::rl::math::Vector& goal, int nrParticles, ::rl::math::Matrix& particles);
       ::rl::math::Vector sampleDirection(Vertex& vertex);
       void drawParticles(::rl::math::Matrix& particles);
       virtual VectorPtr tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen);
