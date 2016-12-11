@@ -27,6 +27,9 @@
 #ifndef _RL_SG_SIMPLESCENE_H_
 #define _RL_SG_SIMPLESCENE_H_
 
+#include <tuple>
+#include <vector>
+
 #include "Scene.h"
 
 namespace rl
@@ -53,9 +56,8 @@ namespace rl
 			virtual bool isColliding();
 			
 		protected:
-			
+
 		private:
-			
 		};
 	}
 }

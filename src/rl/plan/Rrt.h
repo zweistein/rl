@@ -35,6 +35,7 @@
 #include "Planner.h"
 #include "TransformPtr.h"
 #include "VectorPtr.h"
+#include "PcRrtExtensions.h"
 
 namespace rl
 {
@@ -92,7 +93,8 @@ namespace rl
 				// added for Est
 				::rl::math::Real uncertainty;
 				// added for PcRrt
-				::rl::math::Matrix covariance;
+				::boost::shared_ptr<GaussianState> gState;
+
 			};
 			
 			struct TreeBundle;

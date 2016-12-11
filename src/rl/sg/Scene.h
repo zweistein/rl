@@ -32,6 +32,8 @@
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/VRMLnodes/SoVRMLGroup.h>
 
+#include "Shape.h"
+
 namespace rl
 {
 	namespace sg
@@ -66,11 +68,15 @@ namespace rl
 			virtual void remove(Model* model);
 			
 			virtual void setName(const ::std::string& name);
+
+			virtual void lastCollidingShapes(::std::string& first, ::std::string& second);
 			
 		protected:
 			bool isScalingSupported;
 			
 			::std::vector< Model* > models;
+
+			// int lastCollidingShape1;
 			
 		private:
 			static void triangleCallback(void* userData, SoCallbackAction* action, const SoPrimitiveVertex* v1, const SoPrimitiveVertex* v2, const SoPrimitiveVertex* v3);

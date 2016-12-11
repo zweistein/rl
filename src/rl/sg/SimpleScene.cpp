@@ -24,6 +24,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <utility>
+
+#include "Exception.h"
 #include "Body.h"
 #include "Model.h"
 #include "SimpleScene.h"
@@ -34,6 +37,7 @@ namespace rl
 	{
 		SimpleScene::SimpleScene() :
 			Scene()
+			// lastCollidingShapes(::std::make_pair<::rl::sg::Shape*, ::rl::sg::Shape*>(nullptr, nullptr))
 		{
 		}
 		

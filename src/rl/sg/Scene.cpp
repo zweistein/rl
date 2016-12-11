@@ -49,6 +49,8 @@
 #include "Scene.h"
 #include "Shape.h"
 
+#include <iostream>
+
 namespace rl
 {
 	namespace sg
@@ -352,6 +354,12 @@ namespace rl
 			p3(2) = v3->getPoint()[2];
 			
 			points->push_back(p3);
+		}
+
+		void
+		Scene::lastCollidingShapes(::std::string& first, ::std::string& second)
+		{
+			throw Exception("void lastCollidingShapes(::std::string& first, ::std::string& second)");
 		}
 	}
 }

@@ -7,8 +7,12 @@
 
 #include <Eigen/Eigenvalues>
 
+#include <rl/sg/Shape.h>
+#include <rl/sg/solid/Scene.h>
+
 #include "SimpleModel.h"
 #include "Viewer.h"
+#include "GaussianSampler.h"
 
 #include "PcRrt.h"
 
@@ -32,9 +36,13 @@ namespace rl
     bool PcRrt::solve() 
     {
       // add the start configuation
-      this->begin[0] = this->addVertex(this->tree[0], ::boost::make_shared< ::rl::math::Vector >(*this->start));
-      // set initial covariance
-      this->tree[0][this->begin[0]].covariance = ::rl::math::Matrix::Zero(this->model->getDof(), this->model->getDof());
+      this->begin[0] = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(*this->start));
+      // set initial state based on one particle (covariance is zero)
+      ::std::vector<::rl::math::Vector> v;
+      v.push_back(*this->start);
+      // this->tree[0][this->begin[0]].covariance = ::rl::math::Matrix::Zero(this->model->getDof(), this->model->getDof());
+      this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(v);
+
 
       
       timer.start();
@@ -57,112 +65,40 @@ namespace rl
         boost::random::uniform_real_distribution<> distr(0, 2*M_PI);
         float angle = distr(*this->gen);
 
-        // PcRrt::ParticleSet particles;
         ::rl::math::Matrix particles;
-        // check if the extension was successful
+        // sampleParticles will return false if the particle set is not useful
         if (this->sampleParticles(chosenVertex, angle, this->nrParticles, particles))
         {
+          // visualize particles
           this->drawParticles(particles);
           // fit a gaussian to the particles
           Gaussian gaussian(particles);
 
-          // TESTING
-          // std::cout << "all = matrix(c(";
-          // for (int i = 0; i < particles.rows(); ++i)
-          // {
-          //   std::cout << particles.row(i)[0] << "," << particles.row(i)[1];
-          //   if (i < particles.rows()-1) std::cout << ",";
-          // }
-          // std::cout << "), ncol=2, byrow=TRUE)" << std::endl;
-          // for (int k = 1; k <= 2; ++k)
-          // {
-          //   ::std::vector<::std::vector<::rl::math::Vector> > clusters(k);
-          //   this->kMeans(particles, k, clusters);
-          //   ::rl::math::Real lh = 0.0;
-          //   ::rl::math::Real sse = 0.0;
-          //   for (int i = 0; i < k; ++i)
-          //   {
-          //     if (clusters[i].size() == 0)
-          //     {
-          //       std::cout << "empty" << std::endl;
-          //       continue;
-          //     } 
-          //     Gaussian g(clusters[i]);
-          //     lh += g.likelihood(clusters[i]);
-
-          //     // SSE
-          //     for (const auto& d : clusters[i])
-          //     {
-          //       sse += pow(this->model->transformedDistance(d, g.mean), 2);
-          //     }
-          //   }
-            // lh = exp(lh);
-          //   std::cout << k << " clusters, lh = " << lh << ", sse = " << sse << std::endl;
-          // }
+          Vertex newVertex = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(gaussian.mean));
+          // this->tree[0][newVertex].covariance = gaussian.covariance;
+          this->tree[0][newVertex].gState = ::boost::make_shared<GaussianState>(particles);
 
 
-          // for (const auto& c : clusters)
-          // {
-          //   std::cout << "" << std::endl;
-          //   for (const auto& p : c)
-          //   {
-          //     std::cout << p << std::endl;
-          //   }
-          // }
-          // std::cout << std::endl;
-          // ::std::vector<::std::vector<::rl::math::Vector> > clusters(2);
-          // this->kMeans(particles, 2, clusters);
+          this->addEdge(chosenVertex, newVertex, this->tree[0]);
 
-          // std::cout << "c1 = matrix(c(";
-          // for (int i = 0; i < clusters[0].size(); ++i)
-          // {
-          //   std::cout << clusters[0][i][0] << "," << clusters[0][i][1];
-          //   if (i < clusters[0].size()-1) std::cout << ",";
-          // }
-          // std::cout << "), ncol=2, byrow=TRUE)" << std::endl;
-          // TESTING
+          // try to connect to goal
+          Neighbor nearest;
+          nearest.first = newVertex;
+          nearest.second = this->model->transformedDistance(*this->tree[0][newVertex].q, *this->goal);
 
+          PossibleGoal possibleGoal;
+          possibleGoal.neighbor = nearest;
+          possibleGoal.q = this->tryConnect(this->tree[0], nearest, *this->goal);
 
-          // if (gaussian.isUnimodal())
-          // if (clusters[0].size() == 0 || clusters[1].size() == 0)
-          if (this->isUnimodal(particles))
-          {
-            Vertex newVertex = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(gaussian.mean));
-            this->tree[0][newVertex].covariance = gaussian.covariance;
-
-            this->addEdge(chosenVertex, newVertex, this->tree[0]);
-
-            // try to connect to goal
-            Neighbor nearest;
-            nearest.first = newVertex;
-            nearest.second = this->model->transformedDistance(*this->tree[0][newVertex].q, *this->goal);
-
-            PossibleGoal possibleGoal;
-            possibleGoal.neighbor = nearest;
-            possibleGoal.q = this->tryConnect(this->tree[0], nearest, *this->goal);
-
-            if (NULL != possibleGoal.q && this->areEqual(*possibleGoal.q, *this->goal)) {
-              Vertex connected = this->addVertex(this->tree[0], possibleGoal.q);
-              this->addEdge(possibleGoal.neighbor.first, connected, this->tree[0]);
-              this->end[0] = connected;
-              return true;
-            }
+          if (NULL != possibleGoal.q && this->areEqual(*possibleGoal.q, *this->goal)) {
+            Vertex connected = this->addVertex(this->tree[0], possibleGoal.q);
+            this->addEdge(possibleGoal.neighbor.first, connected, this->tree[0]);
+            this->end[0] = connected;
+            return true;
           }
-
-          int foo;
+          // int foo;
           // std::cin >> foo;
         }
-
-
-
-        // if (NULL != extended)
-        // {
-        //   if (this->areEqual(*this->tree[0][extended].q, *this->goal))
-        //   {
-        //     this->end[0] = extended;
-        //     return true;
-        //   }
-        // }
         
         timer.stop();
       }
@@ -170,6 +106,7 @@ namespace rl
       return false;
     }
 
+    // based on number of empty clusters when clustering with different k
     bool PcRrt::isUnimodal(const ::rl::math::Matrix& particles)
     {
       int maxK = 10;
@@ -186,33 +123,14 @@ namespace rl
         {
           if (clusters[i].empty())
           {
-            // std::cout << "k=" << k << " " << i+1 << " empty" << std::endl;
             emptyClusterCount++;
           }
-          // for every data point in cluster[i]
-          // for (const auto& p : clusters[i])
-          // {
-          //   Gaussian g(clusters[i]);
-          //   sse[k-1] += pow(this->model->transformedDistance(p, g.mean), 2);
-          // }
         }
       }
 
-      // ::rl::math::Real sseRatio = (sse[1] - sse[0]) / (sse[2] - sse[1]);
-      // std::cout << "sse-ratio = " << sseRatio << std::endl;
-
-      // for (int i = 0; i < maxK; ++i)
-      // {
-      //   // ::rl::math::Real sseRatio = sse[i-1] / sse[i];
-      //   // std::cout << i-1 << "/" << i << " sse-ratio = " << sseRatio << std::endl;
-      //   std::cout << "k=" << i+1 << ", sse = " << sse[i] << std::endl;
-      // }
-
       if (emptyClusterCount == maxK*(maxK+1)/2 - maxK) {
-        std::cout << "good" << std::endl;
         return true;
       } else {
-        std::cout << "bad" << std::endl;
         return false;
       }
 
@@ -291,28 +209,29 @@ namespace rl
       }
       
       return last;
-
-      // Vertex connected = this->addVertex(tree, last);
-      // this->addEdge(nearest.first, connected, tree);
-      // return connected;
     }
 
-    // ::boost::shared_ptr<PcRrt::ParticleSet> PcRrt::sampleParticles(const Vertex& start, float angle, int nrParticles)
     bool PcRrt::sampleParticles(const Vertex& start, float angle, int nrParticles, ::rl::math::Matrix& particles)
     {
-      // ::boost::shared_ptr<PcRrt::ParticleSet> particles = ::boost::make_shared<PcRrt::ParticleSet>(nrParticles);
-
-      // boost::random::mt19937 gen(std::time(0));
       boost::random::normal_distribution<> distr(angle, 10*M_PI/360);
+
       
       particles.resize(nrParticles, this->model->getDof());
 
       int fails = 0;
       int rowIdx = 0;
 
+      std::vector<::std::string> shapes1, shapes2;
+      std::string shape1 = "";
+      std::string shape2 = "";
+
       while (rowIdx < nrParticles)
       {
-        Particle nextStep(*this->tree[0][start].q);
+        Particle nextStep(this->model->getDof());
+        this->tree[0][start].gState->sample(nextStep);
+
+        std::cout << nextStep << std::endl;
+
         ::rl::math::Real noisyAngle = distr(*this->gen);
         ::rl::math::Real stepX = ::std::cos(noisyAngle) * this->delta;
         ::rl::math::Real stepY = ::std::sin(noisyAngle) * this->delta;
@@ -331,6 +250,19 @@ namespace rl
 
         if (steps > 1)
         {
+          std::string s1, s2;
+          this->solidScene->lastCollidingShapes(s1, s2);
+          if (shape1 == "")
+          {
+            shape1 = s1;
+            shape2 = s2;
+          }
+          else if (s1 != shape1 || s2 != shape2)
+          {
+            // not every collision is between the same two shapes
+            return false;
+          }
+
           particles.row(rowIdx) = nextStep;
           rowIdx++;
         }
@@ -339,19 +271,17 @@ namespace rl
           fails++;
           if (fails > nrParticles / 4)
           {
-            // std::cout << "over" << std::endl;
             return false;
           }
         }
       }
       return true;
-      // return particles;
     }
     
     ::rl::math::Vector PcRrt::sampleDirection(Vertex& vertex)
     {
       // calculate eigenvectors
-      ::Eigen::EigenSolver<::rl::math::Matrix> eig(this->tree[0][vertex].covariance);
+      ::Eigen::EigenSolver<::rl::math::Matrix> eig(this->tree[0][vertex].gState->covariance());
       ::rl::math::Matrix evecs = eig.eigenvectors().real();
       // first principal component
       ::rl::math::Vector pc = evecs.col(0);
@@ -430,20 +360,14 @@ namespace rl
           }
         }
 
-        // update means
+        // update means, keep the old mean to reduce risk of empty clusters
         for (int i = 0; i < k; ++i)
         {
-          // if (clusters[i].empty())
-          // {
-          //   // if cluster is empty, keep mean from last time
-          //   continue;
-          // }
-          means[i] = ::rl::math::Vector(this->model->getDof());
           for (const auto& p : clusters[i])
           {
             means[i] += p;
           }
-          means[i] /= clusters[i].size();
+          means[i] /= clusters[i].size()+1;
         }
       }
     }

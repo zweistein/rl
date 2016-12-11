@@ -30,6 +30,8 @@
 #include <SOLID/SOLID.h>
 #include <SOLID/SOLID_broad.h>
 
+#include <string>
+
 #include "../DepthScene.h"
 #include "../DistanceScene.h"
 #include "../RaycastScene.h"
@@ -51,6 +53,8 @@ namespace rl
 				virtual ~Scene();
 				
 				bool areColliding(::rl::sg::Shape* first, ::rl::sg::Shape* second);
+
+				void lastCollidingShapes(::std::string& first, ::std::string& second);
 				
 				::rl::sg::Model* create();
 				
@@ -78,6 +82,9 @@ namespace rl
 				static void beginOverlap(void* clientData, void* object1, void* object2);
 				
 				static void endOverlap(void* clientData, void* object1, void* object2);
+
+				::rl::sg::Shape* lastCollidingShape1;
+				::rl::sg::Shape* lastCollidingShape2;
 			};
 		}
 	}

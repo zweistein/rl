@@ -1347,6 +1347,8 @@ MainWindow::load(const QString& filename)
 	}
 	else if ("pcRrt" == planner.getNodeTab(0).getName())
 	{
+		std::cout << "Engine: " << this->engine.toStdString() << std::endl;
+
 		this->planner = boost::make_shared< rl::plan::PcRrt >();
 		rl::plan::PcRrt* pcRrt = static_cast< rl::plan::PcRrt* >(this->planner.get()); 
 		pcRrt->delta = path.eval("number(delta)", planner.getNodeTab(0)).getFloatval(1.0f);
@@ -1367,6 +1369,7 @@ MainWindow::load(const QString& filename)
 		
 		pcRrt->kd = path.eval("count(bruteForce) > 0", planner.getNodeTab(0)).getBoolval() ? false : true;
 		pcRrt->sampler = this->sampler.get();
+		pcRrt->solidScene = dynamic_cast<::rl::sg::solid::Scene*>(this->scene.get());
 	}
 	else if ("rrtCon" == planner.getNodeTab(0).getName())
 	{

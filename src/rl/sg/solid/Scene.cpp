@@ -31,6 +31,12 @@
 #include "Scene.h"
 #include "Shape.h"
 
+#include <sstream>
+#include <string>
+
+#include <iostream>
+
+
 namespace rl
 {
 	namespace sg
@@ -43,7 +49,9 @@ namespace rl
 				::rl::sg::DistanceScene(),
 				::rl::sg::RaycastScene(),
 				::rl::sg::SimpleScene(),
-				scene(DT_CreateScene())
+				scene(DT_CreateScene()),
+				lastCollidingShape1(nullptr),
+				lastCollidingShape2(nullptr)
 			{
 				this->broad = BP_CreateScene(this, Scene::beginOverlap, Scene::endOverlap);
 			}
@@ -76,16 +84,46 @@ namespace rl
 				{
 					DT_Vector3 point;
 					
-					return (DT_TRUE == DT_GetCommonPoint(
+					// return (DT_TRUE == DT_GetCommonPoint(
+					// 	shape1->complex ? shape1->object : shape2->object,
+					// 	shape1->complex ? shape2->object : shape1->object,
+					// 	point
+					// )) ? true : false;
+
+					if (DT_TRUE == DT_GetCommonPoint(
 						shape1->complex ? shape1->object : shape2->object,
 						shape1->complex ? shape2->object : shape1->object,
 						point
-					)) ? true : false;
+					))
+					{
+						// std::cout << this << ": " << first << " x " << second << std::endl;
+						this->lastCollidingShape1 = first;
+						this->lastCollidingShape2 = second;
+						return true;
+					}
+					else
+					{
+						return false;
+					}
 				}
 				else
 				{
 					return false;
 				}
+			}
+
+			void
+			Scene::lastCollidingShapes(::std::string& first, ::std::string& second)
+			{
+				const void *addr1 = static_cast<const void*>(this->lastCollidingShape1);
+				::std::stringstream ss1;
+				ss1 << addr1;
+				first = ss1.str();
+
+				const void *addr2 = static_cast<const void*>(this->lastCollidingShape2);
+				::std::stringstream ss2;
+				ss2 << addr2;
+				second = ss2.str();
 			}
 			
 			void
