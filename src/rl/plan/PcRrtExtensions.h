@@ -4,6 +4,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/random.hpp>
 
+#include <Eigen/Eigenvalues>
+
 namespace rl
 {
   namespace plan
@@ -24,6 +26,23 @@ namespace rl
           p.row(i) = particles[i];
         }
         this->init(p);
+      }
+
+      ::rl::math::Real mahalanobis(::rl::math::Vector& x)
+      {
+        return sqrt((x - this->mean).transpose() * this->covariance.inverse() * (x - this->mean));
+      }
+
+      ::rl::math::Matrix eigenvectors()
+      {
+        ::Eigen::EigenSolver<::rl::math::Matrix> eig(this->covariance);
+        return eig.eigenvectors().real();
+      }
+
+      ::rl::math::Vector eigenvalues()
+      {
+        ::Eigen::EigenSolver<::rl::math::Matrix> eig(this->covariance);
+        return eig.eigenvalues().real();
       }
 
       bool isUnimodal()

@@ -1360,6 +1360,7 @@ MainWindow::load(const QString& filename)
 		
 		pcRrt->nrParticles = (int) path.eval("number(nrParticles)", planner.getNodeTab(0)).getFloatval(50.0f);
 		pcRrt->epsilon = path.eval("number(epsilon)", planner.getNodeTab(0)).getFloatval(1.0e-3f);
+		pcRrt->goalEpsilon = path.eval("number(goalEpsilon)", planner.getNodeTab(0)).getFloatval(1.0);
 
 		pcRrt->angleVariance = path.eval("number(angleVariance)", planner.getNodeTab(0)).getFloatval(10.0) * rl::math::DEG2RAD;
 		pcRrt->stepVariance = path.eval("number(stepVariance)", planner.getNodeTab(0)).getFloatval(0.001);

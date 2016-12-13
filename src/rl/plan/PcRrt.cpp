@@ -43,7 +43,14 @@ namespace rl
       // this->tree[0][this->begin[0]].covariance = ::rl::math::Matrix::Zero(this->model->getDof(), this->model->getDof());
       this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(v);
 
-
+      // ::rl::math::Vector from(3), to(3);
+      // from(0) = (*this->start)[0];
+      // from(1) = (*this->start)[1];
+      // from(2) = 0.5;
+      // to(0) = (*this->goal)[0];
+      // to(1) = (*this->goal)[1];
+      // to(2) = 0.5;
+      // this->viewer->drawLine(from, to);
       
       timer.start();
       timer.stop();
@@ -90,13 +97,23 @@ namespace rl
           possibleGoal.neighbor = nearest;
           possibleGoal.q = this->tryConnect(this->tree[0], nearest, *this->goal);
 
-          ::rl::math::Matrix goalParticles;
-          if (NULL != possibleGoal.q && this->areEqual(*possibleGoal.q, *this->goal) && this->sampleGoalParticles(newVertex, *this->goal, this->nrParticles, goalParticles)) {
-            this->drawParticles(goalParticles);
-            Vertex connected = this->addVertex(this->tree[0], possibleGoal.q);
-            this->addEdge(possibleGoal.neighbor.first, connected, this->tree[0]);
-            this->end[0] = connected;
-            return true;
+          if (NULL != possibleGoal.q && this->areEqual(*possibleGoal.q, *this->goal)) {
+            ::rl::math::Matrix goalParticles;
+            if (this->sampleGoalParticles(newVertex, *this->goal, this->nrParticles, goalParticles))
+            {
+              Gaussian goalGaussian(goalParticles);
+              ::rl::math::Real error = goalGaussian.eigenvalues().maxCoeff();
+              std::cout << "reached goal with error: " << error << " (max allowed: " << this->goalEpsilon << ")" << std::endl;
+              if (error < this->goalEpsilon)
+              {
+                this->drawParticles(goalParticles);
+                this->drawEigenvectors(goalGaussian, 20);
+                Vertex connected = this->addVertex(this->tree[0], possibleGoal.q);
+                this->addEdge(possibleGoal.neighbor.first, connected, this->tree[0]);
+                this->end[0] = connected;
+                return true;
+              }              
+            }
           }
           // int foo;
           // std::cin >> foo;
@@ -145,7 +162,6 @@ namespace rl
     {
       ::rl::math::Real distance = nearest.second;
       ::rl::math::Real step = distance;
-      
 
       bool reached = false;
       
@@ -161,20 +177,14 @@ namespace rl
       VectorPtr last = ::boost::make_shared< ::rl::math::Vector >(this->model->getDof());
       
       this->model->interpolate(*tree[nearest.first].q, chosen, step / distance, *last);
-      
-      if (NULL != this->viewer)
-      {
-//        this->viewer->drawConfiguration(*last);
-      }
-      
       this->model->setPosition(*last);
       this->model->updateFrames();
       
-      if (this->model->isColliding())
-      {
-        // return NULL;
-        return VectorPtr();
-      }
+      // if (this->model->isColliding())
+      // {
+        // std::cout << "immediate return!" << std::endl;
+        // return VectorPtr();
+      // }
       
       ::rl::math::Vector next(this->model->getDof());
       
@@ -193,12 +203,6 @@ namespace rl
         }
         
         this->model->interpolate(*last, chosen, step / distance, next);
-        
-        if (NULL != this->viewer)
-        {
-//          this->viewer->drawConfiguration(next);
-        }
-        
         this->model->setPosition(next);
         this->model->updateFrames();
         
@@ -289,8 +293,8 @@ namespace rl
       ::rl::math::Vector nextStep(startVec);
 
       int stepsToGo = 0;
-      ::rl::math::Real stepX = ::std::cos(angle) * this->delta/4;
-      ::rl::math::Real stepY = ::std::sin(angle) * this->delta/4;
+      ::rl::math::Real stepX = ::std::cos(angle) * this->delta/10;
+      ::rl::math::Real stepY = ::std::sin(angle) * this->delta/10;
       while (!this->areEqual(nextStep, goal))
       {
         nextStep[0] += stepX;
@@ -305,17 +309,29 @@ namespace rl
 
       while (rowIdx < nrParticles)
       {
-        // ::rl::math::Vector nextStep(startVec);
         Particle nextStep(this->model->getDof());
         this->tree[0][start].gState->sample(nextStep);
 
+        // std::cout << nextStep << std::endl << std::endl;
+
         ::rl::math::Real noisyAngle = angleDistr(*this->gen);
-        ::rl::math::Real stepX = ::std::cos(noisyAngle) * this->delta/4;
-        ::rl::math::Real stepY = ::std::sin(noisyAngle) * this->delta/4;
+        ::rl::math::Real stepX = ::std::cos(noisyAngle) * this->delta/10;
+        ::rl::math::Real stepY = ::std::sin(noisyAngle) * this->delta/10;
+
         for (int step = 0; step < stepsToGo; step++)
         {
           nextStep[0] += stepX + stepDistr(*this->gen);
           nextStep[1] += stepY + stepDistr(*this->gen);
+
+          this->model->setPosition(nextStep);
+          this->model->updateFrames();
+
+          if (step > 80 && this->model->isColliding())
+          {
+            // std::cout << "collides" << std::endl << std::endl;
+            break;
+          }
+          // std::cout << "free" << std::endl;
         }
         particles.row(rowIdx) = nextStep;
 
@@ -356,6 +372,41 @@ namespace rl
         // std::cout << opPos << std::endl;
         this->viewer->drawSphere(opPos, 0.02);
       }
+    }
+
+    void PcRrt::drawEigenvectors(Gaussian& gaussian, ::rl::math::Real scale)
+    {
+      ::rl::math::Vector3 start, end1, end2;
+      ::rl::math::Matrix vectors = gaussian.eigenvectors();
+      ::rl::math::Vector values = gaussian.eigenvalues();
+      ::rl::math::Vector eigen1 = vectors.col(0) * values(0) * scale;
+      ::rl::math::Vector eigen2 = vectors.col(1) * values(1) * scale;
+
+      this->model->setPosition(gaussian.mean);
+      this->model->updateFrames();
+      const ::rl::math::Transform& t1 = this->model->forwardPosition();
+      start(0) = t1.translation().x();
+      start(1) = t1.translation().y();
+      start(2) = 0.6;
+
+      // this->viewer->drawSphere(start, 0.05);
+
+      this->model->setPosition(gaussian.mean + eigen1);
+      this->model->updateFrames();
+      const ::rl::math::Transform& t2 = this->model->forwardPosition();
+      end1(0) = t2.translation().x();
+      end1(1) = t2.translation().y();
+      end1(2) = 0.6;
+
+      this->model->setPosition(gaussian.mean + eigen2);
+      this->model->updateFrames();
+      const ::rl::math::Transform& t3 = this->model->forwardPosition();
+      end2(0) = t3.translation().x();
+      end2(1) = t3.translation().y();
+      end2(2) = 0.6;
+
+      this->viewer->drawLine(start, end1);
+      this->viewer->drawLine(start, end2);
     }
 
     void PcRrt::kMeans(const ::rl::math::Matrix& data, const int k, ::std::vector<::std::vector<::rl::math::Vector> >& clusters)

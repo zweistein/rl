@@ -57,6 +57,7 @@ namespace rl
       int nrParticles;
       ::rl::math::Real angleVariance;
       ::rl::math::Real stepVariance;
+      ::rl::math::Real goalEpsilon;
       // ::boost::shared_ptr<::rl::sg::Scene> solidScene;
       ::rl::sg::solid::Scene *solidScene;
       
@@ -66,6 +67,7 @@ namespace rl
       bool sampleGoalParticles(const Vertex& start, ::rl::math::Vector& goal, int nrParticles, ::rl::math::Matrix& particles);
       ::rl::math::Vector sampleDirection(Vertex& vertex);
       void drawParticles(::rl::math::Matrix& particles);
+      void drawEigenvectors(Gaussian& gaussian, ::rl::math::Real scale=1.0);
       virtual VectorPtr tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen);
       void kMeans(const ::rl::math::Matrix& data, const int k, ::std::vector<::std::vector<::rl::math::Vector> >& clusters);
       bool isUnimodal(const ::rl::math::Matrix& particles);
