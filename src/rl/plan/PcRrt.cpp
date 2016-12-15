@@ -98,8 +98,8 @@ namespace rl
               if (error < this->goalEpsilon)
               {
                 this->drawParticles(goalParticles);
-                // draw eigenvectors of goal distribution and scale them to make them visible
                 this->drawEigenvectors(goalGaussian);
+
                 Vertex connected = this->addVertex(this->tree[0], possibleGoal.q);
                 this->addEdge(possibleGoal.neighbor.first, connected, this->tree[0]);
                 this->end[0] = connected;
@@ -115,6 +115,9 @@ namespace rl
       return false;
     }
 
+    /**
+      This is just the connect function of the RRT, but it does not insert a node into the tree. 
+    */
     VectorPtr PcRrt::tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen)
     {
       ::rl::math::Real distance = nearest.second;
@@ -373,14 +376,16 @@ namespace rl
 
       ::rl::math::Vector nextStep(startVec);
 
-      int stepsToGo = 0;
-      ::rl::math::Real stepX = ::std::cos(angle) * this->delta/10;
-      ::rl::math::Real stepY = ::std::sin(angle) * this->delta/10;
+      int nrSteps = 0;
+      ::rl::math::Real stepsize = this->delta / 10;
+      ::rl::math::Real stepX = ::std::cos(angle) * stepsize;
+      ::rl::math::Real stepY = ::std::sin(angle) * stepsize;
+      
       while (!this->areEqual(nextStep, goal))
       {
         nextStep[0] += stepX;
         nextStep[1] += stepY;
-        stepsToGo++;
+        nrSteps++;
       }
 
       boost::random::normal_distribution<> angleDistr(angle, this->angleStdDev);
@@ -394,10 +399,26 @@ namespace rl
         this->tree[0][start].gState->sample(nextStep);
 
         ::rl::math::Real noisyAngle = angleDistr(*this->gen);
-        ::rl::math::Real stepX = ::std::cos(noisyAngle) * this->delta/10;
-        ::rl::math::Real stepY = ::std::sin(noisyAngle) * this->delta/10;
+        ::rl::math::Real stepX = ::std::cos(noisyAngle) * stepsize;
+        ::rl::math::Real stepY = ::std::sin(noisyAngle) * stepsize;
 
-        for (int step = 0; step < stepsToGo; step++)
+        int stepsTaken = 0;
+
+        // escape current collision
+        this->model->setPosition(nextStep);
+        this->model->updateFrames();
+        while (this->model->isColliding())
+        {
+          nextStep[0] += stepX + stepDistr(*this->gen);
+          nextStep[1] += stepY + stepDistr(*this->gen);
+          
+          this->model->setPosition(nextStep);
+          this->model->updateFrames();
+          stepsTaken++;
+        }
+
+        // move remaining steps or until collision
+        for (int step = stepsTaken; step < nrSteps; step++)
         {
           nextStep[0] += stepX + stepDistr(*this->gen);
           nextStep[1] += stepY + stepDistr(*this->gen);
@@ -405,7 +426,7 @@ namespace rl
           this->model->setPosition(nextStep);
           this->model->updateFrames();
 
-          if (step > 80 && this->model->isColliding())
+          if (this->model->isColliding())
           {
             break;
           }
