@@ -73,8 +73,7 @@ DEF room2 Transform {
         }
     }
     DEF box1 Transform {
-      translation -1.712928 1.455368 0.500000
-      scale 1.570556 0.106650 1
+      translation -1.748332 -0.768168 0.500000
       children 
         Shape {
           appearance Appearance {
@@ -82,13 +81,12 @@ DEF room2 Transform {
             }
           }
           geometry Box {
-            size 1 1 1
+            size 1.530710 5.623912e-2 0.873680
           }
         }
     }
-    DEF box2 Transform {
-      translation 1.667886 2.223466 0.500000
-      scale 6.381302e-2 0.565698 1
+    DEF box3_5 Transform {
+      translation 1.652902 -8.292198e-3 0.500000
       children 
         Shape {
           appearance Appearance {
@@ -96,13 +94,13 @@ DEF room2 Transform {
             }
           }
           geometry Box {
-            size 1 1 1
+            size 1.736030 5.034512 0.868392
           }
         }
     }
-    DEF box3 Transform {
-      translation -0.957430 2.005480 0.500000
-      scale 6.241352e-2 1 1
+    DEF box1_4 Transform {
+      translation -0.961134 -0.768168 0.500000
+      scale 1 1.000578 1
       children 
         Shape {
           appearance Appearance {
@@ -110,36 +108,7 @@ DEF room2 Transform {
             }
           }
           geometry Box {
-            size 1 1 1
-          }
-        }
-    }
-    DEF box1_3 Transform {
-      rotation -4.170814e-2 -4.989242e-2 0.997882 2.098010
-      translation 1.395530 0.876446 0.459842
-      scale 5.553946 0.106650 1
-      children 
-        Shape {
-          appearance Appearance {
-            material Material {
-            }
-          }
-          geometry Box {
-            size 1 1 1
-          }
-        }
-    }
-    DEF box3_3 Transform {
-      translation -0.331836 -0.403050 0.500000
-      scale 1.002412 1 1
-      children 
-        Shape {
-          appearance Appearance {
-            material Material {
-            }
-          }
-          geometry Box {
-            size 1 1 1
+            size 7.954046e-2 9.422100e-2 1.409438
           }
         }
     }

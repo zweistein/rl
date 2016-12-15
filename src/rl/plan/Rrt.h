@@ -76,6 +76,11 @@ namespace rl
 			
 			/** Use kd-tree for nearest neighbor search instead of brute-force. */
 			bool kd;
+
+			/** Used for PcRrt evaluation. */
+			bool useMotionError;
+			::rl::math::Real angleStdDev;
+      ::rl::math::Real stepStdDev;
 			
 			Sampler* sampler;
 			
@@ -197,6 +202,8 @@ namespace rl
 			::std::vector< Vertex > end;
 			
 			::std::vector< Tree > tree;
+
+			::boost::shared_ptr<::boost::random::mt19937> motionErrorGen;
 			
 		private:
 			

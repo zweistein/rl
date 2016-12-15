@@ -128,8 +128,8 @@ namespace rl
         for (int i = 0; i < this->dims; ++i)
         {
           ::rl::math::Real mean = this->gaussian.mean[i];
-          ::rl::math::Real variance = this->gaussian.covariance(i,i);
-          distributions.push_back(boost::random::normal_distribution<>(mean, variance));
+          ::rl::math::Real std_dev = sqrt(this->gaussian.covariance(i,i));
+          distributions.push_back(boost::random::normal_distribution<>(mean, std_dev));
         }
       }
 

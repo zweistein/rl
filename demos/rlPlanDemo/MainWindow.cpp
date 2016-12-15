@@ -1362,8 +1362,8 @@ MainWindow::load(const QString& filename)
 		pcRrt->epsilon = path.eval("number(epsilon)", planner.getNodeTab(0)).getFloatval(1.0e-3f);
 		pcRrt->goalEpsilon = path.eval("number(goalEpsilon)", planner.getNodeTab(0)).getFloatval(1.0);
 
-		pcRrt->angleVariance = path.eval("number(angleVariance)", planner.getNodeTab(0)).getFloatval(10.0) * rl::math::DEG2RAD;
-		pcRrt->stepVariance = path.eval("number(stepVariance)", planner.getNodeTab(0)).getFloatval(0.001);
+		pcRrt->angleStdDev = path.eval("number(angleVariance)", planner.getNodeTab(0)).getFloatval(10.0) * rl::math::DEG2RAD;
+		pcRrt->stepStdDev = path.eval("number(stepVariance)", planner.getNodeTab(0)).getFloatval(0.001);
 
 		
 		if ("deg" == path.eval("string(epsilon/@unit)", planner.getNodeTab(0)).getStringval())
@@ -1372,6 +1372,7 @@ MainWindow::load(const QString& filename)
 		}
 		
 		pcRrt->kd = path.eval("count(bruteForce) > 0", planner.getNodeTab(0)).getBoolval() ? false : true;
+		pcRrt->useMotionError = path.eval("count(useMotionError) > 0", planner.getNodeTab(0)).getBoolval() ? true : false;
 		pcRrt->sampler = this->sampler.get();
 		pcRrt->solidScene = dynamic_cast<::rl::sg::solid::Scene*>(this->scene.get());
 	}
@@ -1387,6 +1388,10 @@ MainWindow::load(const QString& filename)
 		}
 		
 		rrtCon->epsilon = path.eval("number(epsilon)", planner.getNodeTab(0)).getFloatval(1.0e-3f);
+
+		rrtCon->angleStdDev = path.eval("number(angleVariance)", planner.getNodeTab(0)).getFloatval(10.0) * rl::math::DEG2RAD;
+		rrtCon->stepStdDev = path.eval("number(stepVariance)", planner.getNodeTab(0)).getFloatval(0.001);
+		rrtCon->useMotionError = path.eval("count(useMotionError) > 0", planner.getNodeTab(0)).getBoolval() ? true : false;
 		
 		if ("deg" == path.eval("string(epsilon/@unit)", planner.getNodeTab(0)).getStringval())
 		{

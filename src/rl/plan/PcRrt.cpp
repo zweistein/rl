@@ -42,15 +42,6 @@ namespace rl
       v.push_back(*this->start);
       // this->tree[0][this->begin[0]].covariance = ::rl::math::Matrix::Zero(this->model->getDof(), this->model->getDof());
       this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(v);
-
-      // ::rl::math::Vector from(3), to(3);
-      // from(0) = (*this->start)[0];
-      // from(1) = (*this->start)[1];
-      // from(2) = 0.5;
-      // to(0) = (*this->goal)[0];
-      // to(1) = (*this->goal)[1];
-      // to(2) = 0.5;
-      // this->viewer->drawLine(from, to);
       
       timer.start();
       timer.stop();
@@ -80,6 +71,7 @@ namespace rl
           this->drawParticles(particles);
           // fit a gaussian to the particles
           Gaussian gaussian(particles);
+          // this->drawEigenvectors(gaussian, 1);
 
           Vertex newVertex = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(gaussian.mean));
           // this->tree[0][newVertex].covariance = gaussian.covariance;
@@ -107,7 +99,8 @@ namespace rl
               if (error < this->goalEpsilon)
               {
                 this->drawParticles(goalParticles);
-                this->drawEigenvectors(goalGaussian, 20);
+                // draw eigenvectors of goal distribution and scale them to make them visible
+                this->drawEigenvectors(goalGaussian, 10);
                 Vertex connected = this->addVertex(this->tree[0], possibleGoal.q);
                 this->addEdge(possibleGoal.neighbor.first, connected, this->tree[0]);
                 this->end[0] = connected;
@@ -217,9 +210,140 @@ namespace rl
       return last;
     }
 
+    void PcRrt::getPath(VectorList& path)
+    {
+      Vertex i = this->end[0];
+      
+      while (i != this->begin[0])
+      {
+        path.push_front(*this->tree[0][i].q);
+        i = ::boost::source(*::boost::in_edges(i, this->tree[0]).first, this->tree[0]);
+      }
+      
+      path.push_front(*this->tree[0][i].q);
+
+      if (this->useMotionError)
+      {
+        std::cout << "Using motion error" << std::endl;
+        if (NULL == this->motionErrorGen)
+        {
+          this->motionErrorGen = ::boost::make_shared<::boost::random::mt19937>(42);
+        }
+        // sample a step error
+        ::boost::random::normal_distribution<> stepDistr(0, this->stepStdDev);
+        ::rl::math::Real stepError = stepDistr(*this->motionErrorGen);
+        // sample an angle error
+        ::boost::random::normal_distribution<> angleDistr(0, this->angleStdDev);
+        ::rl::math::Real angleError = angleDistr(*this->motionErrorGen);
+
+        std::cout << "Angle error: " << angleError * 180 / M_PI << std::endl;
+        std::cout << "Step error: " << stepError << " (stepsize: " << this->delta << ")" << std::endl;
+
+        ::std::vector<::rl::math::Vector> pathVec;
+        ::std::vector<::rl::math::Vector> noisyPathVec;
+
+        // convert list to vector for easy access
+        for (const auto& p : path)
+        {
+          pathVec.push_back(p);
+        }
+
+        noisyPathVec.push_back(pathVec[0]);
+        // apply error to path
+        // -2 due to the fact, that the last step will not always move into collision
+        // and needs to be treated differently
+        for (int i = 0; i < pathVec.size()-2; ++i)
+        {
+          ::rl::math::Vector from = pathVec[i];
+          ::rl::math::Vector to = pathVec[i+1];
+          ::rl::math::Vector dir = to - from;
+          ::rl::math::Vector noisyFrom = noisyPathVec[i];
+          ::rl::math::Vector noisyTo(this->model->getDof());
+
+          // calculate noisy angle
+          ::rl::math::Real noisyAngle = ::std::atan2(dir[1], dir[0]) - ::std::atan2(0, 1) + angleError;
+
+          ::rl::math::Real stepX = ::std::cos(noisyAngle) * this->delta;
+          ::rl::math::Real stepY = ::std::sin(noisyAngle) * this->delta;
+
+          // escape from current collision
+          this->model->setPosition(noisyFrom);
+          this->model->updateFrames();
+          while (this->model->isColliding())
+          {
+            noisyFrom[0] += stepX;
+            noisyFrom[1] += stepY;
+            this->model->setPosition(noisyFrom);
+            this->model->updateFrames();
+          }
+          // move into next collision
+          while (!this->model->isColliding())
+          {
+            noisyFrom[0] += stepX;
+            noisyFrom[1] += stepY;
+
+            this->model->setPosition(noisyFrom);
+            this->model->updateFrames();
+          }
+
+          noisyPathVec.push_back(noisyFrom);
+        }
+
+        // connect step
+        // move calculated distance, or until collision
+        ::rl::math::Vector from = pathVec[pathVec.size()-2];
+        ::rl::math::Vector to = pathVec[pathVec.size()-1];
+        ::rl::math::Vector dir = to - from;
+        ::rl::math::Vector noisyFrom = noisyPathVec[pathVec.size()-2];
+
+        // calculate noisy angle
+        ::rl::math::Real noisyAngle = ::std::atan2(dir[1], dir[0]) - ::std::atan2(0, 1) + angleError;
+
+        // pre-calculated distance to goal
+        ::rl::math::Real distance = this->model->distance(from, to);
+
+        ::rl::math::Real stepX = ::std::cos(noisyAngle) * this->delta;
+        ::rl::math::Real stepY = ::std::sin(noisyAngle) * this->delta;
+
+        ::rl::math::Real movedDistance = 0.0;
+        this->model->setPosition(noisyFrom);
+        this->model->updateFrames();
+        // escape from current collision
+        while (this->model->isColliding())
+        {
+          noisyFrom[0] += stepX;
+          noisyFrom[1] += stepY;
+          
+          this->model->setPosition(noisyFrom);
+          this->model->updateFrames();
+        }
+
+        // move into next collision
+        while (!this->model->isColliding() && movedDistance < distance)
+        {
+          noisyFrom[0] += stepX;
+          noisyFrom[1] += stepY;
+
+          movedDistance += this->delta;
+
+          this->model->setPosition(noisyFrom);
+          this->model->updateFrames();
+        }
+
+        noisyPathVec.push_back(noisyFrom);
+
+        // write noisy path
+        path.clear();
+        for (const auto& p : noisyPathVec)
+        {
+          path.push_back(p);
+        }
+      }
+    }
+
     bool PcRrt::sampleParticles(const Vertex& start, float angle, int nrParticles, ::rl::math::Matrix& particles)
     {
-      boost::random::normal_distribution<> distr(angle, this->angleVariance);
+      boost::random::normal_distribution<> distr(angle, this->angleStdDev);
 
       particles.resize(nrParticles, this->model->getDof());
 
@@ -302,8 +426,8 @@ namespace rl
         stepsToGo++;
       }
 
-      boost::random::normal_distribution<> angleDistr(angle, this->angleVariance);
-      boost::random::normal_distribution<> stepDistr(0.0, this->stepVariance);
+      boost::random::normal_distribution<> angleDistr(angle, this->angleStdDev);
+      boost::random::normal_distribution<> stepDistr(0.0, this->stepStdDev);
 
       int rowIdx = 0;
 

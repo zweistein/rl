@@ -3,8 +3,8 @@
   <pcRrt>
     <duration>600</duration>
     <goal>
-      <q>-0.5</q>
-      <q>2.0</q>
+      <q>-1.5</q>
+      <q>-1.1</q>
     </goal>
     <model>
       <kinematics href="../rlkin/box-2d-050505.xml">
@@ -25,8 +25,8 @@
       <scene href="../rlsg/box-2d-keyhole.xml"/>
     </model>
     <start>
-      <q>-0.1</q>
       <q>-1.5</q>
+      <q>1.5</q>
     </start>
     <viewer>
       <background>
@@ -88,9 +88,10 @@
     </viewer>
     <delta>0.01</delta>
     <nrParticles>20</nrParticles>
-    <angleVariance>3</angleVariance>
-    <stepVariance>0.001</stepVariance>
-    <goalEpsilon>0.01</goalEpsilon>
+    <angleVariance>2</angleVariance>
+    <stepVariance>0.0005</stepVariance>
+    <goalEpsilon>0.05</goalEpsilon>
+    <useMotionError/>
     <uniformSampler>
       <seed>1</seed>
     </uniformSampler>

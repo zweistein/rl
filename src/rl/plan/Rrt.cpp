@@ -50,6 +50,7 @@ namespace rl
 			begin(trees, NULL),
 			end(trees, NULL),
 			tree(trees)
+			// motionErrorGen(NULL)
 		{
 		}
 		
@@ -286,6 +287,64 @@ namespace rl
 			}
 			
 			path.push_front(*this->tree[0][i].q);
+
+			if (this->useMotionError)
+			{
+				std::cout << "Using motion error" << std::endl;
+				if (NULL == this->motionErrorGen)
+				{
+					this->motionErrorGen = ::boost::make_shared<::boost::random::mt19937>(42);
+				}
+				// sample a step error
+				::boost::random::normal_distribution<> stepDistr(0, this->stepStdDev);
+				::rl::math::Real stepError = stepDistr(*this->motionErrorGen);
+				// sample an angle error
+				::boost::random::normal_distribution<> angleDistr(0, this->angleStdDev);
+				::rl::math::Real angleError = angleDistr(*this->motionErrorGen);
+
+				std::cout << "Angle error: " << angleError * 180 / M_PI << std::endl;
+				std::cout << "Step error: " << stepError << " (stepsize: " << this->delta << ")" << std::endl;
+
+				::std::vector<::rl::math::Vector> pathVec;
+				::std::vector<::rl::math::Vector> noisyPathVec;
+
+				// convert list to vector for easy access
+				for (const auto& p : path)
+				{
+					pathVec.push_back(p);
+				}
+
+				noisyPathVec.push_back(pathVec[0]);
+				// apply error to path
+				for (int i = 0; i < pathVec.size()-1; ++i)
+				{
+					::rl::math::Vector from = pathVec[i];
+					::rl::math::Vector to = pathVec[i+1];
+					::rl::math::Vector dir = to - from;
+					::rl::math::Vector noisyFrom = noisyPathVec[i];
+					::rl::math::Vector noisyTo(this->model->getDof());
+
+					// calculate noisy angle
+					::rl::math::Real noisyAngle = ::std::atan2(dir[1], dir[0]) - ::std::atan2(0, 1) + angleError;
+
+					// calculate noisy step
+					::rl::math::Real stepLength = this->model->distance(from, to);
+					::rl::math::Real noisyStepLength = stepLength + stepLength / this->delta * stepError;
+
+					// apply noise
+					noisyTo[0] = noisyFrom[0] + ::std::cos(noisyAngle) * noisyStepLength;
+					noisyTo[1] = noisyFrom[1] + ::std::sin(noisyAngle) * noisyStepLength;
+
+					noisyPathVec.push_back(noisyTo);
+				}
+
+				// write noisy path
+				path.clear();
+				for (const auto& p : noisyPathVec)
+				{
+					path.push_back(p);
+				}
+			}
 		}
 		
 		Rrt::Neighbor

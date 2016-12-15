@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rlplan xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="rlplan.xsd">
-  <pcRrt>
+  <rrtCon>
     <duration>600</duration>
     <goal>
-      <!-- <q>0.0</q>
-      <q>-2.2</q> -->
-      <q>-0.9</q>
-      <q>-0.9</q>
+      <q>-1.5</q>
+      <q>-1.1</q>
     </goal>
     <model>
       <kinematics href="../rlkin/box-2d-050505.xml">
@@ -24,11 +22,11 @@
         </world>
       </kinematics>
       <model>0</model>
-      <scene href="../rlsg/box-2d-050505_boxes.xml"/>
+      <scene href="../rlsg/box-2d-keyhole.xml"/>
     </model>
     <start>
-      <q>-0.1</q>
-      <q>-0.1</q>
+      <q>-1.5</q>
+      <q>1.5</q>
     </start>
     <viewer>
       <background>
@@ -80,7 +78,7 @@
           </world>
         </kinematics>
         <model>0</model>
-        <scene href="../rlsg/box-2d-050505_boxes.xml"/>
+        <scene href="../rlsg/box-2d-keyhole.xml"/>
       </model>
       <size>
         <height>768</height>
@@ -90,11 +88,12 @@
     </viewer>
     <delta>0.01</delta>
     <nrParticles>20</nrParticles>
-    <angleVariance>1.5</angleVariance>
-    <stepVariance>0.0001</stepVariance>
-    <goalEpsilon>0.01</goalEpsilon>
+    <angleVariance>2</angleVariance>
+    <stepVariance>0.0005</stepVariance>
+    <goalEpsilon>0.015</goalEpsilon>
+    <useMotionError/>
     <uniformSampler>
       <seed>1</seed>
     </uniformSampler>
-  </pcRrt>
+  </rrtCon>
 </rlplan>
