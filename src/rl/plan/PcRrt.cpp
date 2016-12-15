@@ -40,7 +40,7 @@ namespace rl
       // set initial state based on one particle (covariance is zero)
       ::std::vector<::rl::math::Vector> v;
       v.push_back(*this->start);
-      // this->tree[0][this->begin[0]].covariance = ::rl::math::Matrix::Zero(this->model->getDof(), this->model->getDof());
+      // uncertainty of 0 at starting configuration
       this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(v);
       
       timer.start();
@@ -71,10 +71,9 @@ namespace rl
           this->drawParticles(particles);
           // fit a gaussian to the particles
           Gaussian gaussian(particles);
-          // this->drawEigenvectors(gaussian, 1);
+          this->drawEigenvectors(gaussian);
 
           Vertex newVertex = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(gaussian.mean));
-          // this->tree[0][newVertex].covariance = gaussian.covariance;
           this->tree[0][newVertex].gState = ::boost::make_shared<GaussianState>(particles);
 
 
@@ -100,7 +99,7 @@ namespace rl
               {
                 this->drawParticles(goalParticles);
                 // draw eigenvectors of goal distribution and scale them to make them visible
-                this->drawEigenvectors(goalGaussian, 10);
+                this->drawEigenvectors(goalGaussian);
                 Vertex connected = this->addVertex(this->tree[0], possibleGoal.q);
                 this->addEdge(possibleGoal.neighbor.first, connected, this->tree[0]);
                 this->end[0] = connected;
@@ -108,47 +107,12 @@ namespace rl
               }              
             }
           }
-          // int foo;
-          // std::cin >> foo;
         }
         
         timer.stop();
       }
       
       return false;
-    }
-
-    // based on number of empty clusters when clustering with different k
-    bool PcRrt::isUnimodal(const ::rl::math::Matrix& particles)
-    {
-      int maxK = 10;
-      ::std::vector<::rl::math::Real> sse(maxK);
-      int emptyClusterCount = 0;
-      for (int k = 1; k <= maxK; ++k)
-      {
-        ::std::vector<::std::vector<::rl::math::Vector> > clusters(k);
-        this->kMeans(particles, k, clusters);
-
-        sse[k-1] = 0.0;
-        // for all clusters
-        for (int i = 0; i < k; ++i)
-        {
-          if (clusters[i].empty())
-          {
-            emptyClusterCount++;
-          }
-        }
-      }
-
-      if (emptyClusterCount == maxK*(maxK+1)/2 - maxK) {
-        return true;
-      } else {
-        return false;
-      }
-
-      // if (sseRatio > 15) return false;
-
-      return true;
     }
 
     VectorPtr PcRrt::tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen)
@@ -172,12 +136,6 @@ namespace rl
       this->model->interpolate(*tree[nearest.first].q, chosen, step / distance, *last);
       this->model->setPosition(*last);
       this->model->updateFrames();
-      
-      // if (this->model->isColliding())
-      // {
-        // std::cout << "immediate return!" << std::endl;
-        // return VectorPtr();
-      // }
       
       ::rl::math::Vector next(this->model->getDof());
       
@@ -356,7 +314,6 @@ namespace rl
 
       while (rowIdx < nrParticles)
       {
-        // Particle nextStep(*this->tree[0][start].q);
         Particle nextStep(this->model->getDof());
         this->tree[0][start].gState->sample(nextStep);
 
@@ -436,8 +393,6 @@ namespace rl
         Particle nextStep(this->model->getDof());
         this->tree[0][start].gState->sample(nextStep);
 
-        // std::cout << nextStep << std::endl << std::endl;
-
         ::rl::math::Real noisyAngle = angleDistr(*this->gen);
         ::rl::math::Real stepX = ::std::cos(noisyAngle) * this->delta/10;
         ::rl::math::Real stepY = ::std::sin(noisyAngle) * this->delta/10;
@@ -452,10 +407,8 @@ namespace rl
 
           if (step > 80 && this->model->isColliding())
           {
-            // std::cout << "collides" << std::endl << std::endl;
             break;
           }
-          // std::cout << "free" << std::endl;
         }
         particles.row(rowIdx) = nextStep;
 
@@ -467,17 +420,13 @@ namespace rl
     
     ::rl::math::Vector PcRrt::sampleDirection(Vertex& vertex)
     {
-      // calculate eigenvectors
-      ::Eigen::EigenSolver<::rl::math::Matrix> eig(this->tree[0][vertex].gState->covariance());
-      ::rl::math::Matrix evecs = eig.eigenvectors().real();
-      // first principal component
-      ::rl::math::Vector pc = evecs.col(0);
-      // std::cout << "cov:" << std::endl << this->tree[0][vertex].covariance << std::endl << "first: " << std::endl << evecs.col(0) << std::endl << "second: " << std::endl << evecs.col(1) << std::endl;
+      ::rl::math::Vector evals = this->tree[0][vertex].gState->gaussian().eigenvalues();
+      ::rl::math::Matrix evecs = this->tree[0][vertex].gState->gaussian().eigenvectors();
+      
+      int maxIdx;
+      evals.maxCoeff(&maxIdx);
 
-      return pc.normalized();
-      // boost::random::mt19937 gen(std::time(0));
-      // boost::random::uniform_real_distribution<> distr(0, 2*M_PI);
-      // return distr(*this->gen);
+      return evecs.col(maxIdx).normalized();
     }
 
     void PcRrt::drawParticles(::rl::math::Matrix& particles) 
@@ -503,8 +452,8 @@ namespace rl
       ::rl::math::Vector3 start, end1, end2;
       ::rl::math::Matrix vectors = gaussian.eigenvectors();
       ::rl::math::Vector values = gaussian.eigenvalues();
-      ::rl::math::Vector eigen1 = vectors.col(0) * values(0) * scale;
-      ::rl::math::Vector eigen2 = vectors.col(1) * values(1) * scale;
+      ::rl::math::Vector eigen1 = vectors.col(0) * sqrt(values(0)) * scale;
+      ::rl::math::Vector eigen2 = vectors.col(1) * sqrt(values(1)) * scale;
 
       this->model->setPosition(gaussian.mean);
       this->model->updateFrames();
@@ -512,8 +461,6 @@ namespace rl
       start(0) = t1.translation().x();
       start(1) = t1.translation().y();
       start(2) = 0.6;
-
-      // this->viewer->drawSphere(start, 0.05);
 
       this->model->setPosition(gaussian.mean + eigen1);
       this->model->updateFrames();

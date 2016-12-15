@@ -56,7 +56,6 @@ namespace rl
 
       int nrParticles;
       ::rl::math::Real goalEpsilon;
-      // ::boost::shared_ptr<::rl::sg::Scene> solidScene;
       ::rl::sg::solid::Scene *solidScene;
       
     protected:
@@ -69,7 +68,6 @@ namespace rl
       void drawEigenvectors(Gaussian& gaussian, ::rl::math::Real scale=1.0);
       virtual VectorPtr tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen);
       void kMeans(const ::rl::math::Matrix& data, const int k, ::std::vector<::std::vector<::rl::math::Vector> >& clusters);
-      bool isUnimodal(const ::rl::math::Matrix& particles);
 
       typedef ::rl::math::Vector Particle;
       typedef ::std::vector<Particle> ParticleSet;

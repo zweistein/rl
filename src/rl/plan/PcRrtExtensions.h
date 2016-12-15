@@ -45,26 +45,6 @@ namespace rl
         return eig.eigenvalues().real();
       }
 
-      bool isUnimodal()
-      {
-        return true;
-      }
-
-      ::rl::math::Real likelihood(const ::std::vector<::rl::math::Vector>& data)
-      {
-        ::rl::math::Real det = this->covariance.determinant();
-        assert(det != 0.0);
-
-        ::rl::math::Real lh = 0.0;
-        for (const auto& d : data)
-        {
-          ::rl::math::Real p = exp(-0.5*(d - this->mean).transpose()*this->covariance.inverse()*(d - this->mean)) / sqrt((2*M_PI*this->covariance).determinant());
-          lh += log(p);
-        }
-
-        return lh;
-      }
-
       ::rl::math::Vector mean;
       ::rl::math::Matrix covariance;
 
@@ -89,14 +69,14 @@ namespace rl
     {
     public:
       GaussianState(const ::rl::math::Matrix& particles) :
-      gaussian(particles),
+      gaussianDistr(particles),
       gen(42)
       {
         this->init();
       }
 
       GaussianState(const ::std::vector<::rl::math::Vector>& particles) :
-      gaussian(particles),
+      gaussianDistr(particles),
       gen(42)
       {
         this->init();
@@ -112,28 +92,33 @@ namespace rl
         }
       }
 
+      Gaussian gaussian()
+      {
+        return this->gaussianDistr;
+      }
+
       ::rl::math::Vector mean()
       {
-        return this->gaussian.mean;
+        return this->gaussianDistr.mean;
       }
 
       ::rl::math::Matrix covariance()
       {
-        return this->gaussian.covariance;
+        return this->gaussianDistr.covariance;
       }
     private:
       void init()
       {
-        this->dims = this->gaussian.covariance.rows();
+        this->dims = this->gaussianDistr.covariance.rows();
         for (int i = 0; i < this->dims; ++i)
         {
-          ::rl::math::Real mean = this->gaussian.mean[i];
-          ::rl::math::Real std_dev = sqrt(this->gaussian.covariance(i,i));
+          ::rl::math::Real mean = this->gaussianDistr.mean[i];
+          ::rl::math::Real std_dev = sqrt(this->gaussianDistr.covariance(i,i));
           distributions.push_back(boost::random::normal_distribution<>(mean, std_dev));
         }
       }
 
-      Gaussian gaussian;
+      Gaussian gaussianDistr;
       boost::random::mt19937 gen;
       ::std::vector<boost::random::normal_distribution<> > distributions;
       int dims;
