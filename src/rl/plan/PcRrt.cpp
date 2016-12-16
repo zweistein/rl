@@ -64,8 +64,9 @@ namespace rl
         float angle = distr(*this->gen);
 
         ::rl::math::Matrix particles;
+        ::std::pair<::std::string, ::std::string> collisionShapes;
         // sampleParticles will return false if the particle set is not useful
-        if (this->sampleParticles(chosenVertex, angle, this->nrParticles, particles))
+        if (this->sampleParticles(chosenVertex, angle, this->nrParticles, collisionShapes, particles))
         {
           // visualize particles
           this->drawParticles(particles);
@@ -75,7 +76,9 @@ namespace rl
 
           Vertex newVertex = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(gaussian.mean));
           this->tree[0][newVertex].gState = ::boost::make_shared<GaussianState>(particles);
+          this->tree[0][newVertex].gState->setCollision(collisionShapes);
 
+          // this->sampleSlidingParticles(newVertex, this->nrParticles, particles);
 
           this->addEdge(chosenVertex, newVertex, this->tree[0]);
 
@@ -302,10 +305,9 @@ namespace rl
       }
     }
 
-    bool PcRrt::sampleParticles(const Vertex& start, float angle, int nrParticles, ::rl::math::Matrix& particles)
+    bool PcRrt::sampleParticles(const Vertex& start, float angle, int nrParticles, ::std::pair<::std::string, ::std::string>& collision, ::rl::math::Matrix& particles)
     {
       boost::random::normal_distribution<> distr(angle, this->angleStdDev);
-
       particles.resize(nrParticles, this->model->getDof());
 
       int fails = 0;
@@ -363,6 +365,101 @@ namespace rl
           }
         }
       }
+
+      collision.first = shape1;
+      collision.second = shape2;
+
+      return true;
+    }
+
+    bool PcRrt::sampleSlidingParticles(const Vertex& start, int nrParticles, ::rl::math::Matrix& particles)
+    {
+      ::rl::math::Vector direction = this->sampleDirection(start);
+      float motionAngle = ::std::atan2(direction[1], direction[0]) - ::std::atan2(0, 1);
+
+      boost::random::normal_distribution<> distr(motionAngle, this->angleStdDev);
+      particles.resize(nrParticles, this->model->getDof());
+
+      ::rl::math::Vector startPoint = *this->tree[0][start].q;
+      ::rl::math::Vector testPoint(this->model->getDof());
+
+      testPoint[0] = startPoint[0] + ::std::cos(motionAngle + M_PI/2) * this->delta;
+      testPoint[1] = startPoint[1] + ::std::sin(motionAngle + M_PI/2) * this->delta;
+
+      // the normal will point into free-space
+      ::rl::math::Vector surfaceNormal = (testPoint - startPoint).normalized();
+      this->model->setPosition(testPoint);
+      this->model->updateFrames();
+      if (this->model->isColliding())
+      {
+        // there is an obstacle in this direction, so inverse direction
+        surfaceNormal *= -1;
+      }
+
+      this->drawSurfaceNormal(startPoint, surfaceNormal);
+
+      int rowIdx = 0;
+
+      while (rowIdx < nrParticles)
+      {
+        Particle nextStep(this->model->getDof());
+        this->tree[0][start].gState->sample(nextStep);
+
+        ::rl::math::Real noisyAngle = distr(*this->gen);
+        ::rl::math::Real stepX = ::std::cos(noisyAngle) * this->delta;
+        ::rl::math::Real stepY = ::std::sin(noisyAngle) * this->delta;
+
+        while (true)
+        {
+          nextStep[0] += stepX;
+          nextStep[1] += stepY;
+
+          this->model->setPosition(nextStep);
+          this->model->updateFrames();
+
+          if (this->model->isColliding())
+          {
+            // WHAT ABOUT THE COLLIDING SHAPES WHEN THERE ARE MULTIPLE COLLISIONS??
+            ::std::string shape1, shape2;
+            this->solidScene->lastCollidingShapes(shape1, shape2);
+
+            if (true /*still the same 2 shapes*/)
+            {
+              // we moved inside the obstacle, so reflect out
+              bool colliding = true;
+              do 
+              {
+                // only works in 2D!!
+                nextStep += surfaceNormal * this->delta;
+                this->model->setPosition(nextStep);
+                this->model->updateFrames();
+                
+                colliding = this->model->isColliding();
+                this->solidScene->lastCollidingShapes(shape1, shape2);
+              } 
+              while (false /*colliding && still stuck in this wall*/);
+
+              if (colliding)
+              {
+                // although we reflected out of the wall, we are still colliding,
+                // so we must have reached a new collision
+                break;
+              }
+            }
+            else
+            {
+              // different shapes
+              break;
+            }
+          }
+        }
+
+        particles.row(rowIdx) = nextStep;
+        rowIdx++;
+      }
+
+
+
       return true;
     }
 
@@ -439,7 +536,7 @@ namespace rl
       return true;
     }
     
-    ::rl::math::Vector PcRrt::sampleDirection(Vertex& vertex)
+    ::rl::math::Vector PcRrt::sampleDirection(const Vertex& vertex)
     {
       ::rl::math::Vector evals = this->tree[0][vertex].gState->gaussian().eigenvalues();
       ::rl::math::Matrix evecs = this->tree[0][vertex].gState->gaussian().eigenvectors();
@@ -499,6 +596,27 @@ namespace rl
 
       this->viewer->drawLine(start, end1);
       this->viewer->drawLine(start, end2);
+    }
+
+    void PcRrt::drawSurfaceNormal(::rl::math::Vector& startPoint, ::rl::math::Vector& normal, ::rl::math::Real scale)
+    {
+      ::rl::math::Vector3 start, end;
+
+      this->model->setPosition(startPoint);
+      this->model->updateFrames();
+      const ::rl::math::Transform& t1 = this->model->forwardPosition();
+      start(0) = t1.translation().x();
+      start(1) = t1.translation().y();
+      start(2) = 0.6;
+
+      this->model->setPosition((startPoint + normal) * scale);
+      this->model->updateFrames();
+      const ::rl::math::Transform& t2 = this->model->forwardPosition();
+      end(0) = t2.translation().x();
+      end(1) = t2.translation().y();
+      end(2) = 0.6;
+
+      this->viewer->drawLine(start, end);
     }
 
     void PcRrt::kMeans(const ::rl::math::Matrix& data, const int k, ::std::vector<::std::vector<::rl::math::Vector> >& clusters)

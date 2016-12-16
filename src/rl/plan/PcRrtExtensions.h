@@ -70,14 +70,16 @@ namespace rl
     public:
       GaussianState(const ::rl::math::Matrix& particles) :
       gaussianDistr(particles),
-      gen(42)
+      gen(42),
+      inCollision(false)
       {
         this->init();
       }
 
       GaussianState(const ::std::vector<::rl::math::Vector>& particles) :
       gaussianDistr(particles),
-      gen(42)
+      gen(42),
+      inCollision(false)
       {
         this->init();
       }
@@ -106,6 +108,19 @@ namespace rl
       {
         return this->gaussianDistr.covariance;
       }
+
+      void setCollision(const ::std::pair<::std::string, ::std::string>& coll)
+      {
+        this->inCollision = true;
+        this->collisionShape1 = coll.first;
+        this->collisionShape2 = coll.second;
+      }
+
+      bool isSameCollision(const ::std::pair<::std::string, ::std::string>& coll)
+      {
+        return (this->collisionShape1 == coll.first && this->collisionShape2 == coll.second)
+          || (this->collisionShape1 == coll.second && this->collisionShape2 == coll.first);
+      }
     private:
       void init()
       {
@@ -122,6 +137,8 @@ namespace rl
       boost::random::mt19937 gen;
       ::std::vector<boost::random::normal_distribution<> > distributions;
       int dims;
+      bool inCollision;
+      ::std::string collisionShape1, collisionShape2;
     };
   }
 }
