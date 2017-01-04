@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rlplan xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="rlplan.xsd">
-  <pcRrt>
+  <rrtCon>
     <duration>600</duration>
     <goal>
-      <q>-1.5</q>
+      <q>1.7</q>
       <q>-1.1</q>
     </goal>
     <model>
@@ -22,10 +22,10 @@
         </world>
       </kinematics>
       <model>0</model>
-      <scene href="../rlsg/box-2d-keyhole.xml"/>
+      <scene href="../rlsg/box-2d-narrow-region.xml"/>
     </model>
     <start>
-      <q>-1.5</q>
+      <q>1.0</q>
       <q>1.5</q>
     </start>
     <viewer>
@@ -78,7 +78,7 @@
           </world>
         </kinematics>
         <model>0</model>
-        <scene href="../rlsg/box-2d-keyhole.xml"/>
+        <scene href="../rlsg/box-2d-narrow-region.xml"/>
       </model>
       <size>
         <height>768</height>
@@ -88,12 +88,12 @@
     </viewer>
     <delta>0.01</delta>
     <nrParticles>20</nrParticles>
-    <angleVariance>2</angleVariance>
+    <angleVariance>1</angleVariance>
     <stepVariance>0.0005</stepVariance>
     <goalEpsilon>0.05</goalEpsilon>
-    <!-- <useMotionError/> -->
+    <useMotionError/>
     <uniformSampler>
       <seed>1</seed>
     </uniformSampler>
-  </pcRrt>
+  </rrtCon>
 </rlplan>

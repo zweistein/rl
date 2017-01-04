@@ -109,17 +109,22 @@ namespace rl
         return this->gaussianDistr.covariance;
       }
 
-      void setCollision(const ::std::pair<::std::string, ::std::string>& coll)
+      void setCollision(const ::std::string& coll1, const ::std::string& coll2)
       {
         this->inCollision = true;
-        this->collisionShape1 = coll.first;
-        this->collisionShape2 = coll.second;
+        this->collisionShape1 = coll1;
+        this->collisionShape2 = coll2;
       }
 
-      bool isSameCollision(const ::std::pair<::std::string, ::std::string>& coll)
+      bool isInCollision()
       {
-        return (this->collisionShape1 == coll.first && this->collisionShape2 == coll.second)
-          || (this->collisionShape1 == coll.second && this->collisionShape2 == coll.first);
+        return this->inCollision;
+      }
+
+      bool isSameCollision(const ::std::string& coll1, const ::std::string& coll2)
+      {
+        return (this->collisionShape1 == coll1 && this->collisionShape2 == coll2)
+          || (this->collisionShape1 == coll2 && this->collisionShape2 == coll1);
       }
     private:
       void init()

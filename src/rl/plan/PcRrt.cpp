@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <ctime>
+#include <fstream>
 
 #include <boost/make_shared.hpp>
 #include <boost/random.hpp>
@@ -8,6 +9,7 @@
 #include <Eigen/Eigenvalues>
 
 #include <rl/sg/Shape.h>
+#include <rl/sg/Body.h>
 #include <rl/sg/solid/Scene.h>
 
 #include "SimpleModel.h"
@@ -55,18 +57,27 @@ namespace rl
         Neighbor n = this->nearest(this->tree[0], chosenSample);
         Vertex chosenVertex = n.first;
         
-        // choose angle depending on covariance
-        // ::rl::math::Vector dir = this->sampleDirection(chosenVertex);
-        // float angle = ::std::atan2(dir[1], dir[0]) - ::std::atan2(0, 1);
-        // float angle = this->sampleAngle(chosenVertex);
-        // boost::random::mt19937 gen(std::time(0));
         boost::random::uniform_real_distribution<> distr(0, 2*M_PI);
         float angle = distr(*this->gen);
 
         ::rl::math::Matrix particles;
         ::std::pair<::std::string, ::std::string> collisionShapes;
+
+        boost::random::uniform_int_distribution<> doSlideDistr(0, 100);
+        int doSlide = doSlideDistr(*this->gen);
+
         // sampleParticles will return false if the particle set is not useful
-        if (this->sampleParticles(chosenVertex, angle, this->nrParticles, collisionShapes, particles))
+        bool sampleResult;
+        if (this->tree[0][chosenVertex].gState->isInCollision() && doSlide > 80)
+        {
+          sampleResult = this->sampleSlidingParticles(chosenVertex, this->nrParticles, collisionShapes, particles);
+        }
+        else
+        {
+          sampleResult = this->sampleParticles(chosenVertex, angle, this->nrParticles, collisionShapes, particles);
+        }
+
+        if (sampleResult)
         {
           // visualize particles
           this->drawParticles(particles);
@@ -76,7 +87,7 @@ namespace rl
 
           Vertex newVertex = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(gaussian.mean));
           this->tree[0][newVertex].gState = ::boost::make_shared<GaussianState>(particles);
-          this->tree[0][newVertex].gState->setCollision(collisionShapes);
+          this->tree[0][newVertex].gState->setCollision(collisionShapes.first, collisionShapes.second);
 
           // this->sampleSlidingParticles(newVertex, this->nrParticles, particles);
 
@@ -111,6 +122,9 @@ namespace rl
             }
           }
         }
+
+        // int foo;
+        // std::cin >> foo;
         
         timer.stop();
       }
@@ -302,6 +316,12 @@ namespace rl
         {
           path.push_back(p);
         }
+
+        // write error to file
+        ::rl::math::Real error = this->model->distance(noisyPathVec[noisyPathVec.size()-1], *this->goal);
+        std::ofstream resultFile;
+        resultFile.open(this->getName() + std::string("_results.txt"), std::ios::out | std::ios::app);
+        resultFile << error << std::endl;
       }
     }
 
@@ -372,10 +392,28 @@ namespace rl
       return true;
     }
 
-    bool PcRrt::sampleSlidingParticles(const Vertex& start, int nrParticles, ::rl::math::Matrix& particles)
+    bool PcRrt::sampleSlidingParticles(const Vertex& start, int nrParticles, ::std::pair<::std::string, ::std::string>& collision, ::rl::math::Matrix& particles)
     {
       ::rl::math::Vector direction = this->sampleDirection(start);
+      boost::random::uniform_int_distribution<> dirDistr(0, 1);
+      // randomly inverse sliding direction
+      int randomInverse = dirDistr(*this->gen);
+      if (randomInverse == 1)
+      {
+        direction *= -1;
+      }
       float motionAngle = ::std::atan2(direction[1], direction[0]) - ::std::atan2(0, 1);
+
+      // clip to x*90deg angles
+      double remainder = std::fmod(motionAngle, (M_PI/2));
+      if (abs(remainder) < M_PI/4)
+      {
+        motionAngle -= remainder;
+      }
+      else
+      {
+        motionAngle += M_PI/2 - remainder;
+      }
 
       boost::random::normal_distribution<> distr(motionAngle, this->angleStdDev);
       particles.resize(nrParticles, this->model->getDof());
@@ -386,19 +424,45 @@ namespace rl
       testPoint[0] = startPoint[0] + ::std::cos(motionAngle + M_PI/2) * this->delta;
       testPoint[1] = startPoint[1] + ::std::sin(motionAngle + M_PI/2) * this->delta;
 
+      ::std::string slidingSurface = "";
+      ::std::map<::std::string, bool> allColls;
+
       // the normal will point into free-space
       ::rl::math::Vector surfaceNormal = (testPoint - startPoint).normalized();
       this->model->setPosition(testPoint);
       this->model->updateFrames();
       if (this->model->isColliding())
       {
+        this->getAllCollidingShapes(allColls);
+        if (allColls.size() != 1)
+        {
+          std::cout << "weird slidingSurface init, abort" << std::endl;
+          return false;
+        }
+        slidingSurface = allColls.begin()->first;
         // there is an obstacle in this direction, so inverse direction
         surfaceNormal *= -1;
       }
+      else
+      {
+        testPoint[0] = startPoint[0] + ::std::cos(motionAngle - M_PI/2) * this->delta;
+        testPoint[1] = startPoint[1] + ::std::sin(motionAngle - M_PI/2) * this->delta;
+        this->model->setPosition(testPoint);
+        this->model->updateFrames();
+        this->getAllCollidingShapes(allColls);
+        if (allColls.size() != 1)
+        {
+          std::cout << "weird slidingSurface init, abort" << std::endl;
+          return false;
+        }
+        slidingSurface = allColls.begin()->first;
+      }
 
-      this->drawSurfaceNormal(startPoint, surfaceNormal);
+      // this->drawSurfaceNormal(startPoint, surfaceNormal);
 
       int rowIdx = 0;
+      ::std::string shape1, shape2;
+      ::std::string finalCollision = "";
 
       while (rowIdx < nrParticles)
       {
@@ -409,48 +473,66 @@ namespace rl
         ::rl::math::Real stepX = ::std::cos(noisyAngle) * this->delta;
         ::rl::math::Real stepY = ::std::sin(noisyAngle) * this->delta;
 
+        int steps = 0;
+
         while (true)
         {
           nextStep[0] += stepX;
           nextStep[1] += stepY;
+
+          steps++;
 
           this->model->setPosition(nextStep);
           this->model->updateFrames();
 
           if (this->model->isColliding())
           {
-            // WHAT ABOUT THE COLLIDING SHAPES WHEN THERE ARE MULTIPLE COLLISIONS??
-            ::std::string shape1, shape2;
-            this->solidScene->lastCollidingShapes(shape1, shape2);
+            this->getAllCollidingShapes(allColls);
 
-            if (true /*still the same 2 shapes*/)
+            if (allColls[slidingSurface])
             {
-              // we moved inside the obstacle, so reflect out
-              bool colliding = true;
-              do 
+              // we moved into sliding surface, so reflect out
+              do
               {
                 // only works in 2D!!
                 nextStep += surfaceNormal * this->delta;
                 this->model->setPosition(nextStep);
                 this->model->updateFrames();
-                
-                colliding = this->model->isColliding();
-                this->solidScene->lastCollidingShapes(shape1, shape2);
+                this->getAllCollidingShapes(allColls);
               } 
-              while (false /*colliding && still stuck in this wall*/);
+              while (allColls[slidingSurface]);
 
-              if (colliding)
+              // check if we are in free-space or if we have another collision
+              if (this->model->isColliding())
               {
-                // although we reflected out of the wall, we are still colliding,
-                // so we must have reached a new collision
+                // there is still a collision, so the sliding ends here
                 break;
               }
             }
             else
             {
-              // different shapes
               break;
             }
+          }
+        }
+
+        if (steps < 10)
+        {
+          // we did not move very far, this is considered failure
+          return false;
+        }
+
+        this->getAllCollidingShapes(allColls);
+        if (finalCollision == "")
+        {
+          finalCollision = allColls.begin()->first;
+        }
+        else
+        {
+          if (finalCollision != allColls.begin()->first)
+          {
+            // different collision than the other particles
+            return false;
           }
         }
 
@@ -458,7 +540,8 @@ namespace rl
         rowIdx++;
       }
 
-
+      collision.first = shape1;
+      collision.second = shape2;
 
       return true;
     }
@@ -545,6 +628,25 @@ namespace rl
       evals.maxCoeff(&maxIdx);
 
       return evecs.col(maxIdx).normalized();
+    }
+
+    void PcRrt::getAllCollidingShapes(::std::map<::std::string, bool>& collidingShapes)
+    {
+      collidingShapes.clear();
+      ::rl::sg::Body *sceneBody = this->solidScene->getModel(1)->getBody(0);
+      ::rl::sg::Shape *robotShape = this->solidScene->getModel(0)->getBody(2)->getShape(0);
+
+      ::std::string shape1, shape2;
+      for (size_t i = 0; i < sceneBody->getNumShapes(); ++i)
+      {
+        
+        if (this->solidScene->areColliding(sceneBody->getShape(i), robotShape))
+        {
+          this->solidScene->lastCollidingShapes(shape1, shape2);
+          collidingShapes[shape1] = true;
+        }
+
+      }
     }
 
     void PcRrt::drawParticles(::rl::math::Matrix& particles) 

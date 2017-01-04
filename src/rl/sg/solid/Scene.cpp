@@ -96,7 +96,6 @@ namespace rl
 						point
 					))
 					{
-						// std::cout << this << ": " << first << " x " << second << std::endl;
 						this->lastCollidingShape1 = first;
 						this->lastCollidingShape2 = second;
 						return true;

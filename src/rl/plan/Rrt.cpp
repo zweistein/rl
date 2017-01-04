@@ -25,6 +25,7 @@
 //
 
 #include <boost/make_shared.hpp>
+#include <fstream>
 
 #include "Rrt.h"
 #include "Sampler.h"
@@ -344,6 +345,12 @@ namespace rl
 				{
 					path.push_back(p);
 				}
+
+				// write error to file
+				::rl::math::Real error = this->model->distance(noisyPathVec[noisyPathVec.size()-1], *this->goal);
+				std::ofstream resultFile;
+				resultFile.open(this->getName() + std::string("_results.txt"), std::ios::out | std::ios::app);
+				resultFile << error << std::endl;
 			}
 		}
 		
