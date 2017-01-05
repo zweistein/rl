@@ -109,22 +109,14 @@ namespace rl
         return this->gaussianDistr.covariance;
       }
 
-      void setCollision(const ::std::string& coll1, const ::std::string& coll2)
+      void setColliding()
       {
         this->inCollision = true;
-        this->collisionShape1 = coll1;
-        this->collisionShape2 = coll2;
       }
 
       bool isInCollision()
       {
         return this->inCollision;
-      }
-
-      bool isSameCollision(const ::std::string& coll1, const ::std::string& coll2)
-      {
-        return (this->collisionShape1 == coll1 && this->collisionShape2 == coll2)
-          || (this->collisionShape1 == coll2 && this->collisionShape2 == coll1);
       }
     private:
       void init()
@@ -143,7 +135,6 @@ namespace rl
       ::std::vector<boost::random::normal_distribution<> > distributions;
       int dims;
       bool inCollision;
-      ::std::string collisionShape1, collisionShape2;
     };
   }
 }

@@ -62,8 +62,8 @@ namespace rl
       
     protected:
       virtual bool solve();
-      bool sampleParticles(const Vertex& start, float angle, int nrParticles, ::std::pair<::std::string, ::std::string>& collision, ::rl::math::Matrix& particles);
-      bool sampleSlidingParticles(const Vertex& start, int nrParticles, ::std::pair<::std::string, ::std::string>& collision, ::rl::math::Matrix& particles);
+      bool sampleGuardedParticles(const Vertex& start, float angle, int nrParticles, ::rl::math::Matrix& particles);
+      bool sampleSlidingParticles(const Vertex& start, int nrParticles, ::rl::math::Matrix& particles);
       bool sampleGoalParticles(const Vertex& start, ::rl::math::Vector& goal, int nrParticles, ::rl::math::Matrix& particles);
       void getAllCollidingShapes(::std::map<::std::string, bool>& collidingShapes);
       void getPath(VectorList& path);
