@@ -25,6 +25,7 @@ set(
 	Rrt.h
 	Est.h
 	PcRrt.h
+        PcRrtExtensions.h
 	RrtCon.h
 	RrtConCon.h
 	RrtDual.h

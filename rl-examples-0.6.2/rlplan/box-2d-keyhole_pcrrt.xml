@@ -90,7 +90,7 @@
     <nrParticles>20</nrParticles>
     <angleVariance>2</angleVariance>
     <stepVariance>0.0005</stepVariance>
-    <goalEpsilon>0.05</goalEpsilon>
+    <goalEpsilon>0.005</goalEpsilon>
     <!-- <useMotionError/> -->
     <uniformSampler>
       <seed>1</seed>

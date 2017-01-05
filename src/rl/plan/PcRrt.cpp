@@ -22,7 +22,7 @@ namespace rl
 {
   namespace plan
   {
-    ::std::string PcRrt::getName() const 
+    ::std::string PcRrt::getName() const
     {
       return "PCRRT";
     }
@@ -35,7 +35,28 @@ namespace rl
       this->gen = ::boost::make_shared<boost::random::mt19937>(42);
     }
 
-    bool PcRrt::solve() 
+//    void PcRrt::sampleDirection(::rl::math::Vector& rd)
+//    {
+//        boost::random::uniform_real_distribution<> distr(0, 1);
+//        int dim = rd.rows();
+//        ::rl::math::Vector rd(dim);
+//        double rdsum = 0;
+//        for(int i=0; i<dim; i++)
+//        {
+//            rd[dim] = distr(*this->gen);
+//            rsdum+=rd[dim]*rd[dim];
+//        }
+//        rdsum = sqrt(rdsum);
+//        for(int i=0; i<dim; i++)
+//        {
+//            rd[dim] /= rdsum;
+//        }
+
+//        return rd;
+//    }
+
+
+    bool PcRrt::solve()
     {
       // add the start configuation
       this->begin[0] = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(*this->start));
@@ -44,10 +65,10 @@ namespace rl
       v.push_back(*this->start);
       // uncertainty of 0 at starting configuration
       this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(v);
-      
+
       timer.start();
       timer.stop();
-      
+
       while (timer.elapsed() < this->duration)
       {
         // vector for Voronoi vertex selection
@@ -56,9 +77,6 @@ namespace rl
         this->choose(chosenSample);
         Neighbor n = this->nearest(this->tree[0], chosenSample);
         Vertex chosenVertex = n.first;
-        
-        boost::random::uniform_real_distribution<> distr(0, 2*M_PI);
-        float angle = distr(*this->gen);
 
         ::rl::math::Matrix particles;
         ::std::pair<::std::string, ::std::string> collisionShapes;
@@ -67,15 +85,15 @@ namespace rl
         int doSlide = doSlideDistr(*this->gen);
 
         // sampleParticles will return false if the particle set is not useful
-        bool sampleResult;
-        if (this->tree[0][chosenVertex].gState->isInCollision() && doSlide > 80)
-        {
-          sampleResult = this->sampleSlidingParticles(chosenVertex, this->nrParticles, collisionShapes, particles);
-        }
-        else
-        {
-          sampleResult = this->sampleParticles(chosenVertex, angle, this->nrParticles, collisionShapes, particles);
-        }
+        bool sampleResult = this->sampleParticles(n, chosenSample, this->nrParticles, collisionShapes, particles);
+//        if (this->tree[0][chosenVertex].gState->isInCollision() && doSlide > 80)
+//        {
+//          sampleResult = this->sampleSlidingParticles(chosenVertex, randDir, this->nrParticles, collisionShapes, particles);
+//        }
+//        else
+//        {
+//          sampleResult = this->sampleParticles(chosenVertex, randDir, this->nrParticles, collisionShapes, particles);
+//        }
 
         if (sampleResult)
         {
@@ -104,7 +122,7 @@ namespace rl
 
           if (NULL != possibleGoal.q && this->areEqual(*possibleGoal.q, *this->goal)) {
             ::rl::math::Matrix goalParticles;
-            if (this->sampleGoalParticles(newVertex, *this->goal, this->nrParticles, goalParticles))
+            if (this->sampleGoalParticles(nearest, *this->goal, this->nrParticles, goalParticles))
             {
               Gaussian goalGaussian(goalParticles);
               ::rl::math::Real error = goalGaussian.eigenvalues().maxCoeff();
@@ -118,22 +136,22 @@ namespace rl
                 this->addEdge(possibleGoal.neighbor.first, connected, this->tree[0]);
                 this->end[0] = connected;
                 return true;
-              }              
+              }
             }
           }
         }
 
         // int foo;
         // std::cin >> foo;
-        
+
         timer.stop();
       }
-      
+
       return false;
     }
 
     /**
-      This is just the connect function of the RRT, but it does not insert a node into the tree. 
+      This is just the connect function of the RRT, but it does not insert a node into the tree.
     */
     VectorPtr PcRrt::tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen)
     {
@@ -141,7 +159,7 @@ namespace rl
       ::rl::math::Real step = distance;
 
       bool reached = false;
-      
+
       if (step <= this->delta)
       {
         reached = true;
@@ -150,20 +168,20 @@ namespace rl
       {
         step = this->delta;
       }
-      
+
       VectorPtr last = ::boost::make_shared< ::rl::math::Vector >(this->model->getDof());
-      
+
       this->model->interpolate(*tree[nearest.first].q, chosen, step / distance, *last);
       this->model->setPosition(*last);
       this->model->updateFrames();
-      
+
       ::rl::math::Vector next(this->model->getDof());
-      
+
       while (!reached)
       {
         distance = this->model->distance(*last, chosen);
         step = distance;
-        
+
         if (step <= this->delta)
         {
           reached = true;
@@ -172,32 +190,32 @@ namespace rl
         {
           step = this->delta;
         }
-        
+
         this->model->interpolate(*last, chosen, step / distance, next);
         this->model->setPosition(next);
         this->model->updateFrames();
-        
+
         if (this->model->isColliding())
         {
           break;
         }
-        
+
         *last = next;
       }
-      
+
       return last;
     }
 
     void PcRrt::getPath(VectorList& path)
     {
       Vertex i = this->end[0];
-      
+
       while (i != this->begin[0])
       {
         path.push_front(*this->tree[0][i].q);
         i = ::boost::source(*::boost::in_edges(i, this->tree[0]).first, this->tree[0]);
       }
-      
+
       path.push_front(*this->tree[0][i].q);
 
       if (this->useMotionError)
@@ -291,7 +309,7 @@ namespace rl
         {
           noisyFrom[0] += stepX;
           noisyFrom[1] += stepY;
-          
+
           this->model->setPosition(noisyFrom);
           this->model->updateFrames();
         }
@@ -325,9 +343,10 @@ namespace rl
       }
     }
 
-    bool PcRrt::sampleParticles(const Vertex& start, float angle, int nrParticles, ::std::pair<::std::string, ::std::string>& collision, ::rl::math::Matrix& particles)
+    bool PcRrt::sampleParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::std::pair<::std::string, ::std::string>& collision, ::rl::math::Matrix& particles)
     {
-      boost::random::normal_distribution<> distr(angle, this->angleStdDev);
+      double posError = 0.05;
+      boost::random::normal_distribution<> distr(0, posError);
       particles.resize(nrParticles, this->model->getDof());
 
       int fails = 0;
@@ -340,25 +359,56 @@ namespace rl
       while (rowIdx < nrParticles)
       {
         Particle nextStep(this->model->getDof());
-        this->tree[0][start].gState->sample(nextStep);
 
-        ::rl::math::Real noisyAngle = distr(*this->gen);
-        ::rl::math::Real stepX = ::std::cos(noisyAngle) * this->delta;
-        ::rl::math::Real stepY = ::std::sin(noisyAngle) * this->delta;
+        //Sample initial position
+        this->tree[0][nearest.first].gState->sample(nextStep);
+
+        //Sample independent noise
+        ::rl::math::Vector motionNoise(this->model->getDof());
+        ::rl::math::Vector mean = this->tree[0][nearest.first].gState->mean();
+        ::rl::math::Vector delta = chosen-mean;
+        for(int i=0; i<this->model->getDof(); i++)
+        {
+            motionNoise[i] = distr(*this->gen)*delta[i];
+        }
+
+
+        ::rl::math::Vector error = nextStep-mean;
+        ::rl::math::Vector target =  chosen+error+motionNoise;
 
         int steps = 0;
+        bool reached = false;
+        bool collision = false;
         do
         {
-          nextStep[0] += stepX;
-          nextStep[1] += stepY;
+          double distance = this->model->distance(nextStep, target);
+          double step = distance;
+
+          if (step <= this->delta)
+          {
+              reached = true;
+          }
+          else
+          {
+              step = this->delta;
+          }
+          this->model->interpolate(nextStep, target,  step / distance, nextStep);
 
           this->model->setPosition(nextStep);
           this->model->updateFrames();
+
+          collision = this->model->isColliding();
           steps++;
         }
-        while (!this->model->isColliding());
+        while (!collision && !reached);
 
-        if (steps > 1)
+        if(reached)
+        {
+            particles.row(rowIdx) = nextStep;
+            rowIdx++;
+            shape1 = "no collision";
+        }
+        else if (steps > 1 && collision)
         {
           std::string s1, s2;
           this->solidScene->lastCollidingShapes(s1, s2);
@@ -392,7 +442,7 @@ namespace rl
       return true;
     }
 
-    bool PcRrt::sampleSlidingParticles(const Vertex& start, int nrParticles, ::std::pair<::std::string, ::std::string>& collision, ::rl::math::Matrix& particles)
+    bool PcRrt::sampleSlidingParticles(const Vertex& start, const ::rl::math::Vector& chosen, int nrParticles, ::std::pair<::std::string, ::std::string>& collision, ::rl::math::Matrix& particles)
     {
       ::rl::math::Vector direction = this->sampleDirection(start);
       boost::random::uniform_int_distribution<> dirDistr(0, 1);
@@ -499,7 +549,7 @@ namespace rl
                 this->model->setPosition(nextStep);
                 this->model->updateFrames();
                 this->getAllCollidingShapes(allColls);
-              } 
+              }
               while (allColls[slidingSurface]);
 
               // check if we are in free-space or if we have another collision
@@ -546,84 +596,78 @@ namespace rl
       return true;
     }
 
-    bool PcRrt::sampleGoalParticles(const Vertex& start, ::rl::math::Vector& goal, int nrParticles, ::rl::math::Matrix& particles)
+    bool PcRrt::sampleGoalParticles(const Neighbor& nearest, ::rl::math::Vector& goal, int nrParticles, ::rl::math::Matrix& particles)
     {
-      particles.resize(nrParticles, this->model->getDof());
+        double posError = 0.05;
+        boost::random::normal_distribution<> distr(0, posError);
+        particles.resize(nrParticles, this->model->getDof());
 
-      ::rl::math::Vector startVec = *this->tree[0][start].q;
-      ::rl::math::Vector dir = goal - startVec;
-      ::rl::math::Real angle = ::std::atan2(dir[1], dir[0]) - ::std::atan2(0, 1);
+        int rowIdx = 0;
 
-      ::rl::math::Vector nextStep(startVec);
-
-      int nrSteps = 0;
-      ::rl::math::Real stepsize = this->delta / 10;
-      ::rl::math::Real stepX = ::std::cos(angle) * stepsize;
-      ::rl::math::Real stepY = ::std::sin(angle) * stepsize;
-      
-      while (!this->areEqual(nextStep, goal))
-      {
-        nextStep[0] += stepX;
-        nextStep[1] += stepY;
-        nrSteps++;
-      }
-
-      boost::random::normal_distribution<> angleDistr(angle, this->angleStdDev);
-      boost::random::normal_distribution<> stepDistr(0.0, this->stepStdDev);
-
-      int rowIdx = 0;
-
-      while (rowIdx < nrParticles)
-      {
-        Particle nextStep(this->model->getDof());
-        this->tree[0][start].gState->sample(nextStep);
-
-        ::rl::math::Real noisyAngle = angleDistr(*this->gen);
-        ::rl::math::Real stepX = ::std::cos(noisyAngle) * stepsize;
-        ::rl::math::Real stepY = ::std::sin(noisyAngle) * stepsize;
-
-        int stepsTaken = 0;
-
-        // escape current collision
-        this->model->setPosition(nextStep);
-        this->model->updateFrames();
-        while (this->model->isColliding())
+        while (rowIdx < nrParticles)
         {
-          nextStep[0] += stepX + stepDistr(*this->gen);
-          nextStep[1] += stepY + stepDistr(*this->gen);
-          
-          this->model->setPosition(nextStep);
-          this->model->updateFrames();
-          stepsTaken++;
-        }
+          Particle nextStep(this->model->getDof());
 
-        // move remaining steps or until collision
-        for (int step = stepsTaken; step < nrSteps; step++)
-        {
-          nextStep[0] += stepX + stepDistr(*this->gen);
-          nextStep[1] += stepY + stepDistr(*this->gen);
+          //Sample initial position
+          this->tree[0][nearest.first].gState->sample(nextStep);
 
-          this->model->setPosition(nextStep);
-          this->model->updateFrames();
-
-          if (this->model->isColliding())
+          //Sample independent noise
+          ::rl::math::Vector motionNoise(this->model->getDof());
+          ::rl::math::Vector mean = this->tree[0][nearest.first].gState->mean();
+          ::rl::math::Vector delta = goal-mean;
+          for(int i=0; i<this->model->getDof(); i++)
           {
-            break;
+              motionNoise[i] = distr(*this->gen)*delta[i];
           }
+
+
+          ::rl::math::Vector error = nextStep-mean;
+          ::rl::math::Vector target =  goal+error+motionNoise;
+
+          int steps = 0;
+          bool reached = false;
+          bool collision = false;
+          do
+          {
+            double distance = this->model->distance(nextStep, target);
+            double step = distance;
+
+            if (step <= this->delta)
+            {
+                reached = true;
+            }
+            else
+            {
+                step = this->delta;
+            }
+            this->model->interpolate(nextStep, target,  step / distance, nextStep);
+
+            this->model->setPosition(nextStep);
+            this->model->updateFrames();
+
+            collision = this->model->isColliding();
+            steps++;
+          }
+          while (!collision && !reached);
+
+          if(reached)
+          {
+              particles.row(rowIdx) = nextStep;
+              rowIdx++;
+          }
+          else
+              return false;
+
         }
-        particles.row(rowIdx) = nextStep;
 
-        rowIdx++;
-      }
-
-      return true;
+        return true;
     }
-    
+
     ::rl::math::Vector PcRrt::sampleDirection(const Vertex& vertex)
     {
       ::rl::math::Vector evals = this->tree[0][vertex].gState->gaussian().eigenvalues();
       ::rl::math::Matrix evecs = this->tree[0][vertex].gState->gaussian().eigenvectors();
-      
+
       int maxIdx;
       evals.maxCoeff(&maxIdx);
 
@@ -639,7 +683,7 @@ namespace rl
       ::std::string shape1, shape2;
       for (size_t i = 0; i < sceneBody->getNumShapes(); ++i)
       {
-        
+
         if (this->solidScene->areColliding(sceneBody->getShape(i), robotShape))
         {
           this->solidScene->lastCollidingShapes(shape1, shape2);
@@ -649,7 +693,7 @@ namespace rl
       }
     }
 
-    void PcRrt::drawParticles(::rl::math::Matrix& particles) 
+    void PcRrt::drawParticles(::rl::math::Matrix& particles)
     {
       // std::cout << "drawParticles" << std::endl;
       // std::cout << particles << std::endl;
