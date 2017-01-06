@@ -29,7 +29,7 @@
 
 #include "Rrt.h"
 #include "Sampler.h"
-#include "SimpleModel.h"
+#include "NoisyModel.h"
 #include "Verifier.h"
 #include "Viewer.h"
 
@@ -275,6 +275,8 @@ namespace rl
 			
 			return vertices;
 		}
+
+
 		
 		void
 		Rrt::getPath(VectorList& path)
@@ -290,21 +292,14 @@ namespace rl
 			path.push_front(*this->tree[0][i].q);
 
 			if (this->useMotionError)
-			{
-				std::cout << "Using motion error" << std::endl;
-				if (NULL == this->motionErrorGen)
-				{
-					this->motionErrorGen = ::boost::make_shared<::boost::random::mt19937>(42);
-				}
-				// sample a step error
-				::boost::random::normal_distribution<> stepDistr(0, this->stepStdDev);
-				::rl::math::Real stepError = stepDistr(*this->motionErrorGen);
-				// sample an angle error
-				::boost::random::normal_distribution<> angleDistr(0, this->angleStdDev);
-				::rl::math::Real angleError = angleDistr(*this->motionErrorGen);
-
-				std::cout << "Angle error: " << angleError * 180 / M_PI << std::endl;
-				std::cout << "Step error: " << stepError << " (stepsize: " << this->delta << ")" << std::endl;
+            {
+                std::cout << "Using motion error" << std::endl;
+                ::rl::math::Vector error;
+                this->model->sampleMotionError(error);
+                for(int i=0; i<this->model->getDof(); i++)
+                {
+                    std::cout << "error joint "<<i<<": " << error[i] << std::endl;
+                }
 
 				::std::vector<::rl::math::Vector> pathVec;
 				::std::vector<::rl::math::Vector> noisyPathVec;
@@ -322,20 +317,16 @@ namespace rl
 					::rl::math::Vector from = pathVec[i];
 					::rl::math::Vector to = pathVec[i+1];
 					::rl::math::Vector dir = to - from;
+
 					::rl::math::Vector noisyFrom = noisyPathVec[i];
 					::rl::math::Vector noisyTo(this->model->getDof());
 
-					// calculate noisy angle
-					::rl::math::Real noisyAngle = ::std::atan2(dir[1], dir[0]) - ::std::atan2(0, 1) + angleError;
 
-					// calculate noisy step
-					::rl::math::Real stepLength = this->model->distance(from, to);
-					::rl::math::Real noisyStepLength = stepLength + stepLength / this->delta * stepError;
-
-					// apply noise
-					noisyTo[0] = noisyFrom[0] + ::std::cos(noisyAngle) * noisyStepLength;
-					noisyTo[1] = noisyFrom[1] + ::std::sin(noisyAngle) * noisyStepLength;
-
+                    for(int i=0; i<this->model->getDof(); i++)
+                    {
+                        // apply noise
+                        noisyTo[i] = noisyFrom[i] + (1+error[i])*dir[i];
+                    }
 					noisyPathVec.push_back(noisyTo);
 				}
 
@@ -347,10 +338,10 @@ namespace rl
 				}
 
 				// write error to file
-				::rl::math::Real error = this->model->distance(noisyPathVec[noisyPathVec.size()-1], *this->goal);
+                ::rl::math::Real error_output = this->model->distance(noisyPathVec[noisyPathVec.size()-1], *this->goal);
 				std::ofstream resultFile;
 				resultFile.open(this->getName() + std::string("_results.txt"), std::ios::out | std::ios::app);
-				resultFile << error << std::endl;
+                resultFile << error_output << std::endl;
 			}
 		}
 		

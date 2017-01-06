@@ -29,7 +29,7 @@
 
 #include "PrmUtilityGuided.h"
 #include "Sampler.h"
-#include "SimpleModel.h"
+#include "NoisyModel.h"
 
 // If this flag is set to true, the implementation is equal to the Brendan Burns version.
 //#define ORIGINAL_VERSION

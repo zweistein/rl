@@ -24,7 +24,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "SimpleModel.h"
+#include "NoisyModel.h"
 #include "SimpleOptimizer.h"
 #include "Verifier.h"
 #include "Viewer.h"

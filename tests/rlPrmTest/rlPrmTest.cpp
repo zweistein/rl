@@ -33,7 +33,7 @@
 #include <rl/math/Unit.h>
 #include <rl/plan/Prm.h>
 #include <rl/plan/RecursiveVerifier.h>
-#include <rl/plan/SimpleModel.h>
+#include <rl/plan/NoisyModel.h>
 #include <rl/plan/SimpleOptimizer.h>
 #include <rl/plan/UniformSampler.h>
 #include <rl/sg/Model.h>
@@ -94,7 +94,7 @@ main(int argc, char** argv)
 		
 		boost::shared_ptr< rl::kin::Kinematics > kinematics(rl::kin::Kinematics::create(argv[3]));
 		
-		rl::plan::SimpleModel model;
+        rl::plan::NoisyModel model;
 		model.kin = kinematics.get();
 		model.model = scene->getModel(0);
 		model.scene = scene.get();

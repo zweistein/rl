@@ -31,7 +31,7 @@
 #include "GaussianSampler.h"
 #include "Prm.h"
 #include "Sampler.h"
-#include "SimpleModel.h"
+#include "NoisyModel.h"
 #include "UniformSampler.h"
 #include "Verifier.h"
 #include "Viewer.h"

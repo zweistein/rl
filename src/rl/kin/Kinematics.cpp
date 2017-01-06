@@ -545,7 +545,7 @@ namespace rl
 			assert(q1.size() == this->getDof());
 			assert(q2.size() == this->getDof());
 			assert(alpha >= 0.0f);
-			assert(alpha <= 1.0f);
+            //assert(alpha <= 1.0f);
 			assert(q.size() == this->getDof());
 			
 			for (::std::size_t i = 0; i < this->getDof(); ++i)

@@ -25,7 +25,7 @@
 //
 
 #include "SequentialVerifier.h"
-#include "SimpleModel.h"
+#include "NoisyModel.h"
 
 namespace rl
 {

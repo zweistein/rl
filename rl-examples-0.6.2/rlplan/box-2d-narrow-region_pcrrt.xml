@@ -88,8 +88,10 @@
     </viewer>
     <delta>0.01</delta>
     <nrParticles>20</nrParticles>
-    <angleVariance>1</angleVariance>
-    <stepVariance>0.0005</stepVariance>
+    <motionError>
+      <q>0.05</q>
+      <q>0.05</q>
+    </motionError>
     <goalEpsilon>0.05</goalEpsilon>
     <!-- <useMotionError/> -->
     <uniformSampler>

@@ -15,6 +15,7 @@ set(
 	GaussianSampler.h
 	MatrixPtr.h
 	Model.h
+	NoisyModel.h
 	Optimizer.h
 	Orthogonal_k_neighbor_search.h
 	Planner.h
@@ -25,7 +26,7 @@ set(
 	Rrt.h
 	Est.h
 	PcRrt.h
-        PcRrtExtensions.h
+    PcRrtExtensions.h
 	RrtCon.h
 	RrtConCon.h
 	RrtDual.h
@@ -59,6 +60,7 @@ set(
 	Exception.cpp
 	GaussianSampler.cpp
 	Model.cpp
+	NoisyModel.cpp
 	Optimizer.cpp
 	Planner.cpp
 	Prm.cpp

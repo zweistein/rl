@@ -11,7 +11,7 @@
 #include <rl/math/Unit.h>
 #include <rl/util/Timer.h>
 
-#include "DistanceModel.h"
+#include "NoisyModel.h"
 #include "Eet.h"
 #include "Exception.h"
 #include "Sampler.h"

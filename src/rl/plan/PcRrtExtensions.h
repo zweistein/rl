@@ -109,9 +109,9 @@ namespace rl
         return this->gaussianDistr.covariance;
       }
 
-      void setColliding()
+      void setColliding(bool isInCollision)
       {
-        this->inCollision = true;
+        this->inCollision = isInCollision;
       }
 
       bool isInCollision()

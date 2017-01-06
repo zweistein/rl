@@ -27,7 +27,7 @@
 #include <boost/make_shared.hpp>
 
 #include "RrtExtExt.h"
-#include "SimpleModel.h"
+#include "NoisyModel.h"
 
 namespace rl
 {

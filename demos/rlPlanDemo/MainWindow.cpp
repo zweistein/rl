@@ -800,7 +800,7 @@ MainWindow::load(const QString& filename)
 		}
 	}
 	
-	this->model = boost::make_shared< rl::plan::DistanceModel >();
+    this->model = boost::make_shared< rl::plan::NoisyModel >();
 	
 	if (NULL != this->kin)
 	{
@@ -1352,6 +1352,15 @@ MainWindow::load(const QString& filename)
 		this->planner = boost::make_shared< rl::plan::PcRrt >();
 		rl::plan::PcRrt* pcRrt = static_cast< rl::plan::PcRrt* >(this->planner.get()); 
 		pcRrt->delta = path.eval("number(delta)", planner.getNodeTab(0)).getFloatval(1.0f);
+
+        rl::xml::Object motionError = path.eval("//motionError//q");
+        this->motionError = boost::make_shared< rl::math::Vector >(motionError.getNodeNr());
+        this->model->motionError = this->motionError.get();
+
+        for (int i = 0; i < motionError.getNodeNr(); ++i)
+        {
+            (*this->model->motionError)(i) = std::atof(motionError.getNodeTab(i).getContent().c_str());
+        }
 		
 		if ("deg" == path.eval("string(delta/@unit)", planner.getNodeTab(0)).getStringval())
 		{
@@ -1362,10 +1371,6 @@ MainWindow::load(const QString& filename)
 		pcRrt->epsilon = path.eval("number(epsilon)", planner.getNodeTab(0)).getFloatval(1.0e-3f);
 		pcRrt->goalEpsilon = path.eval("number(goalEpsilon)", planner.getNodeTab(0)).getFloatval(1.0);
 
-		pcRrt->angleStdDev = path.eval("number(angleVariance)", planner.getNodeTab(0)).getFloatval(10.0) * rl::math::DEG2RAD;
-		pcRrt->stepStdDev = path.eval("number(stepVariance)", planner.getNodeTab(0)).getFloatval(0.001);
-
-		
 		if ("deg" == path.eval("string(epsilon/@unit)", planner.getNodeTab(0)).getStringval())
 		{
 			pcRrt->epsilon *= rl::math::DEG2RAD;
@@ -1389,8 +1394,15 @@ MainWindow::load(const QString& filename)
 		
 		rrtCon->epsilon = path.eval("number(epsilon)", planner.getNodeTab(0)).getFloatval(1.0e-3f);
 
-		rrtCon->angleStdDev = path.eval("number(angleVariance)", planner.getNodeTab(0)).getFloatval(10.0) * rl::math::DEG2RAD;
-		rrtCon->stepStdDev = path.eval("number(stepVariance)", planner.getNodeTab(0)).getFloatval(0.001);
+        rl::xml::Object motionError = path.eval("//motionError//q");
+        this->motionError = boost::make_shared< rl::math::Vector >(motionError.getNodeNr());
+        this->model->motionError = this->motionError.get();
+
+        for (int i = 0; i < motionError.getNodeNr(); ++i)
+        {
+            (*this->model->motionError)(i) = std::atof(motionError.getNodeTab(i).getContent().c_str());
+        }
+
 		rrtCon->useMotionError = path.eval("count(useMotionError) > 0", planner.getNodeTab(0)).getBoolval() ? true : false;
 		
 		if ("deg" == path.eval("string(epsilon/@unit)", planner.getNodeTab(0)).getStringval())
@@ -1522,6 +1534,7 @@ MainWindow::load(const QString& filename)
 			);
 		}
 	}
+
 	
 	this->planner->duration = path.eval("number(//duration)").getFloatval(std::numeric_limits< rl::math::Real >::max());
 	this->planner->goal = this->goal.get();

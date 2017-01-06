@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2009, Markus Rickert
+// Copyright (c) 2016, Arne Sieverling
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -24,34 +24,39 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "Sampler.h"
-#include "NoisyModel.h"
+#ifndef _RL_PLAN_NOISYMODEL_H_
+#define _RL_PLAN_NOISYMODEL_H_
+
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/random.hpp>
+
+#include "DistanceModel.h"
 
 namespace rl
 {
 	namespace plan
 	{
-		Sampler::Sampler() :
-			model(NULL)
+        class NoisyModel : public DistanceModel
 		{
-		}
-		
-		Sampler::~Sampler()
-		{
-		}
-		
-		void
-		Sampler::generateCollisionFree(::rl::math::Vector& q)
-		{
-			assert(q.size() == this->model->getDof());
+		public:
+            NoisyModel();
 			
-			do
-			{
-				this->generate(q);
-				this->model->setPosition(q);
-				this->model->updateFrames();
-			}
-			while (this->model->isColliding());
-		}
+
+            virtual ~NoisyModel();
+
+            void sampleMotionError(::rl::math::Vector &error);
+
+            void interpolateNoisy(const ::rl::math::Vector& q1, const ::rl::math::Vector& q2, const ::rl::math::Real& alpha, const ::rl::math::Vector& noise, ::rl::math::Vector& q) const;
+
+
+            ::rl::math::Vector* motionError;
+
+         private:
+            ::boost::shared_ptr<::boost::random::mt19937> motionErrorGen;
+
+		};
 	}
 }
+
+#endif // _RL_PLAN_NOISYMODEL_H_

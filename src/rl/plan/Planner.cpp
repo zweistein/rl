@@ -25,7 +25,7 @@
 //
 
 #include "Planner.h"
-#include "SimpleModel.h"
+#include "NoisyModel.h"
 #include "Viewer.h"
 
 namespace rl

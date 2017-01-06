@@ -36,7 +36,7 @@
 #include <boost/shared_ptr.hpp>
 #include <rl/kin/Kinematics.h>
 #include <rl/mdl/Dynamic.h>
-#include <rl/plan/DistanceModel.h>
+#include <rl/plan/NoisyModel.h>
 #include <rl/plan/Optimizer.h>
 #include <rl/plan/Planner.h>
 #include <rl/plan/Sampler.h>
@@ -81,9 +81,11 @@ public:
 	
 	boost::shared_ptr< rl::mdl::Dynamic > mdl2;
 	
-	boost::shared_ptr< rl::plan::DistanceModel > model;
+    boost::shared_ptr< rl::plan::NoisyModel > model;
 	
 	boost::shared_ptr< rl::plan::Model > model2;
+
+    boost::shared_ptr< rl::math::Vector > motionError;
 	
 	QMutex mutex;
 	
