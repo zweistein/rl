@@ -66,12 +66,12 @@ namespace rl
       //void sampleDirection(::rl::math::Vector& rd);
       bool sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision);
       bool sampleGuardedParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision);
-      bool sampleSlidingParticles(const Vertex& start, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision);
+      bool sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision);
       bool sampleGoalParticles(const Neighbor& nearest, ::rl::math::Vector& goal, int nrParticles, ::rl::math::Matrix& particles);
 
       void getAllCollidingShapes(::std::map<::std::string, bool>& collidingShapes);
       void getPath(VectorList& path);
-      ::rl::math::Vector sampleDirection(const Vertex& vertex);
+      ::rl::math::Vector getNormal(const Vertex& vertex);
       void drawParticles(::rl::math::Matrix& particles);
       void drawEigenvectors(Gaussian& gaussian, ::rl::math::Real scale = 1.0);
       void drawSurfaceNormal(::rl::math::Vector& startPoint, ::rl::math::Vector& normal, ::rl::math::Real scale = 1.0);
