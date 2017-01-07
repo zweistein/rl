@@ -88,23 +88,12 @@ namespace rl
         // sample[...]Particles will return false if the particle set is not useful
         bool sampleResult;
         bool isInCollision = false;
-        //        if (this->tree[0][chosenVertex].gState->isInCollision() && doSlide)
-        //        {
-        //          sampleResult = this->sampleSlidingParticles(chosenVertex, this->nrParticles, particles);
-        //        }
-        //        else
-        //        {
-        //          ::boost::random::uniform_real_distribution<> distr(0, 2*M_PI);
-        //          float angle = distr(*this->gen);
-        doSlide = false;
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
           sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
-        else if (doGuardedMove)
+        else if (doGuardedMove && this->tree[0][n.first].gState->isInCollision())
           sampleResult = this->sampleGuardedParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
         else
           sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
-
-        //        }
 
 
         if (sampleResult)
@@ -235,9 +224,9 @@ namespace rl
         std::cout << "Using motion error" << std::endl;
         ::rl::math::Vector error;
         this->model->sampleMotionError(error);
-        for(int i=0; i<this->model->getDof(); i++)
+        for (int i = 0; i < this->model->getDof(); ++i)
         {
-          std::cout << "error joint "<<i<<": " << error[i] << std::endl;
+          std::cout << "error joint " << i<< ": " << error[i] << std::endl;
         }
 
         ::std::vector<::rl::math::Vector> pathVec;
@@ -386,23 +375,22 @@ namespace rl
 
         Particle nextStep = init;
 
-        //Sample noise
+        // sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
         this->model->sampleMotionError(motionNoise);
 
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->mean();
 
-        ::rl::math::Vector initial_error = init-mean;
-        ::rl::math::Vector target =  chosen+initial_error;
+        ::rl::math::Vector initialError = init - mean;
+        ::rl::math::Vector target = chosen + initialError;
 
         int steps = 0;
         bool reached = false;
         bool collision = false;
-        double step = this->delta;
-        double distance = this->model->distance(init, target);
+        ::rl::math::Real step = this->delta;
+        ::rl::math::Real distance = this->model->distance(init, target);
         do
         {
-
           if (step >= distance)
           {
             reached = true;
@@ -416,13 +404,12 @@ namespace rl
 
           collision = this->model->isColliding();
 
-          step+=delta;
-
+          step += delta;
           steps++;
         }
         while (!collision && !reached);
 
-        if(reached)
+        if (reached && !collision)
         {
           particles.row(rowIdx) = nextStep;
           rowIdx++;
@@ -452,7 +439,7 @@ namespace rl
         }
         else
         {
-          // we moved just one step until the next collision, this is not useful
+          // we moved just one step until the next collision, or collided in last step
           return false;
         }
       }
@@ -469,7 +456,7 @@ namespace rl
 
       int rowIdx = 0;
 
-      std::vector<::std::string> shapes1, shapes2;
+      std::vector<std::string> shapes1, shapes2;
       std::string shape1 = "";
       std::string shape2 = "";
 
@@ -481,20 +468,20 @@ namespace rl
 
         Particle nextStep = init;
 
-        //Sample noise
+        // sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
         this->model->sampleMotionError(motionNoise);
 
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->mean();
 
-        ::rl::math::Vector initial_error = init-mean;
-        ::rl::math::Vector target =  chosen+initial_error;
+        ::rl::math::Vector initialError = init - mean;
+        ::rl::math::Vector target = chosen + initialError;
 
         // move until collision
         int steps = 0;
         bool collision = false;
-        double step = delta;
-        double distance = this->model->distance(init, target);
+        ::rl::math::Real step = delta;
+        ::rl::math::Real distance = this->model->distance(init, target);
         do
         {
           this->model->interpolateNoisy(init, target,  step / distance, motionNoise, nextStep);
@@ -504,8 +491,7 @@ namespace rl
 
           collision = this->model->isColliding();
 
-          step+=delta;
-
+          step += delta;
           steps++;
         }
         while (!collision);
@@ -548,32 +534,37 @@ namespace rl
       */
     bool PcRrt::sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision)
     {
+      if (!this->tree[0][nearest.first].gState->isInCollision())
+      {
+        // we must start from within a collision to slide
+        return false;
+      }
+
       particles.resize(nrParticles, this->model->getDof());
 
-      //project chosen on the plane
+      // project chosen on the plane
       ::rl::math::Vector normal = this->getNormal(nearest.first);
-      ::rl::math::Vector p_vec = *(this->tree[0][nearest.first].q);
-      double dist = (chosen-p_vec).dot(normal);
-      if(dist<0)
+      ::rl::math::Vector pVec = *(this->tree[0][nearest.first].q);
+      ::rl::math::Real dist = (chosen - pVec).dot(normal);
+      if (dist < 0)
       {
-        dist*=-1;
-        normal*=-1;
+        dist *= -1;
+        normal *= -1;
       }
-      ::rl::math::Vector goal = chosen-dist*normal;
+      ::rl::math::Vector goal = chosen - dist*normal;
 
-
-      //this->drawSurfaceNormal(p_vec, normal);
+      // this->drawSurfaceNormal(pVec, normal);
 
       int rowIdx = 0;
-      ::std::string shape1, shape2;
-      ::std::string finalCollision = "";
+      std::string shape1, shape2;
+      std::string finalCollision = "";
 
       while (rowIdx < nrParticles)
       {
         // sample a starting point
         Particle init(this->model->getDof());
 
-        //must be in collision
+        // must be in collision
         do
         {
           this->tree[0][nearest.first].gState->sample(init);
@@ -581,32 +572,29 @@ namespace rl
           this->model->setPosition(init);
           this->model->updateFrames();
         }
-        while(!this->model->isColliding());
+        while (!this->model->isColliding());
 
+        std::string slidingSurface = "";
+        std::map<::std::string, bool> allColls;
 
-        //Sample noise
+        // aquire sliding surface
+        this->getAllCollidingShapes(allColls);
+        if (allColls.size() != 1)
+        {
+          // we should not collide with more than one obstacle here, so this is a weird state
+          std::cout << "weird slidingSurface init, abort" << std::endl;
+          return false;
+        }
+        slidingSurface = allColls.begin()->first;
+
+        // sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
         this->model->sampleMotionError(motionNoise);
 
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->mean();
 
-        ::rl::math::Vector initial_error = init-mean;
-        ::rl::math::Vector target =  goal+initial_error;
-
-        ::std::string slidingSurface = "";
-        ::std::map<::std::string, bool> allColls;
-
-
-        //Get intial collision
-        this->getAllCollidingShapes(allColls);
-        if (allColls.size() != 1)
-        {
-          // we should not collide with more than one obstacle here, so this is a weird state
-          ::std::cout << "weird slidingSurface init, abort" << ::std::endl;
-          return false;
-        }
-        slidingSurface = allColls.begin()->first;
-
+        ::rl::math::Vector initialError = init - mean;
+        ::rl::math::Vector target = goal + initialError;
 
         int steps = 0;
         double step = delta;
@@ -620,8 +608,7 @@ namespace rl
           this->model->setPosition(nextStep);
           this->model->updateFrames();
 
-          step+=delta;
-
+          step += delta;
           steps++;
 
           if (this->model->isColliding())
@@ -657,7 +644,8 @@ namespace rl
           }
           else
           {
-            break; //lost contact
+            // lost contact
+            break; 
           }
         }
 
@@ -672,23 +660,32 @@ namespace rl
         if (finalCollision == "")
         {
           // first particle, init final collision
-          if(allColls.size()==0)
-            finalCollision = "lost_contact";
-          else
-            finalCollision = allColls.begin()->first;
-        }
-        else
-        {
-          if(allColls.size()==0)
+          if (allColls.size() == 0)
           {
-            if(finalCollision != "lost_contact")
-              return false;
+            finalCollision = "lost_contact";
           }
           else
           {
-            if(finalCollision != allColls.begin()->first)
+            finalCollision = allColls.begin()->first;
+          }
+        }
+        else
+        {
+          if (allColls.size() == 0)
+          {
+            if (finalCollision != "lost_contact")
+            {
+              // some particles lost contact, some didn't...
+              return false;
+            }
+          }
+          else
+          {
+            if (finalCollision != allColls.begin()->first)
+            {
               // different collision than the other particles -> different contact state
               return false;
+            }
           }
         }
 
@@ -713,29 +710,30 @@ namespace rl
       {
         Particle nextStep(this->model->getDof());
 
-        //Sample initial position
+        // sample initial position
         this->tree[0][nearest.first].gState->sample(nextStep);
 
-        //Sample independent noise
+        // sample independent noise
         ::rl::math::Vector motionNoise(this->model->getDof());
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->mean();
-        ::rl::math::Vector delta = goal-mean;
-        for(int i=0; i<this->model->getDof(); i++)
+        ::rl::math::Vector delta = goal - mean;
+
+        for (int i = 0; i < this->model->getDof(); ++i)
         {
-          motionNoise[i] = distr(*this->gen)*delta[i];
+          motionNoise[i] = distr(*this->gen) * delta[i];
         }
 
 
-        ::rl::math::Vector error = nextStep-mean;
-        ::rl::math::Vector target =  goal+error+motionNoise;
+        ::rl::math::Vector error = nextStep - mean;
+        ::rl::math::Vector target = goal + error + motionNoise;
 
         int steps = 0;
         bool reached = false;
         bool collision = false;
         do
         {
-          double distance = this->model->distance(nextStep, target);
-          double step = distance;
+          ::rl::math::Real distance = this->model->distance(nextStep, target);
+          ::rl::math::Real step = distance;
 
           if (step <= this->delta)
           {
@@ -755,14 +753,15 @@ namespace rl
         }
         while (!collision && !reached);
 
-        if(reached)
+        if (reached)
         {
           particles.row(rowIdx) = nextStep;
           rowIdx++;
         }
         else
+        {
           return false;
-
+        }
       }
 
       return true;
