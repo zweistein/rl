@@ -55,6 +55,8 @@ namespace rl
 				bool areColliding(::rl::sg::Shape* first, ::rl::sg::Shape* second);
 
 				void lastCollidingShapes(::std::string& first, ::std::string& second);
+        ::rl::math::Vector3 lastCollisionPoint(){return this->lastCollPoint;}
+
 				
 				::rl::sg::Model* create();
 				
@@ -85,6 +87,8 @@ namespace rl
 
 				::rl::sg::Shape* lastCollidingShape1;
 				::rl::sg::Shape* lastCollidingShape2;
+
+        ::rl::math::Vector3 lastCollPoint;
 			};
 		}
 	}

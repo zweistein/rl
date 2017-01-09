@@ -98,6 +98,9 @@ namespace rl
 					{
 						this->lastCollidingShape1 = first;
 						this->lastCollidingShape2 = second;
+            this->lastCollPoint(0) = point[0];
+            this->lastCollPoint(1) = point[1];
+            this->lastCollPoint(2) = point[2];
 						return true;
 					}
 					else
