@@ -89,11 +89,17 @@ namespace rl
         bool sampleResult;
         bool isInCollision = false;
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
+        {
           sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
+        }
         else if (doGuardedMove)
+        {
           sampleResult = this->sampleGuardedParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
+        }
         else
+        {
           sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
+        }
 
 
         if (sampleResult)
@@ -149,8 +155,8 @@ namespace rl
     }
 
     /**
-            This is just the connect function of the RRT, but it does not insert a node into the tree.
-          */
+      This is just the connect function of the RRT, but it does not insert a node into the tree.
+    */
     VectorPtr PcRrt::tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen)
     {
       ::rl::math::Real distance = nearest.second;
@@ -549,10 +555,17 @@ namespace rl
       particles.resize(nrParticles, this->model->getDof());
 
       // project chosen on the plane
-      ::rl::math::Vector normal = this->getNormal(nearest.first);
+      ::rl::math::Vector normal(this->model->getDof());
+      if (!this->getNormal(nearest.first, normal))
+      {
+        // uncertainty distribution insufficient for retrieving normal
+        std::cout << "uncertainty distribution insufficient for retrieving normal" << std::endl;
+        return false;
+      }
       ::rl::math::Vector pVec = *(this->tree[0][nearest.first].q);
       ::rl::math::Vector goal;
       double dist = projectOnSurface(chosen, pVec, normal, goal);
+
       if (dist < 0)
       {
         dist *= -1;
@@ -798,15 +811,18 @@ namespace rl
       return true;
     }
 
-    ::rl::math::Vector PcRrt::getNormal(const Vertex& vertex)
+    bool PcRrt::getNormal(const Vertex& vertex, ::rl::math::Vector& normal)
     {
       ::rl::math::Vector evals = this->tree[0][vertex].gState->gaussian().eigenvalues();
       ::rl::math::Matrix evecs = this->tree[0][vertex].gState->gaussian().eigenvectors();
 
-      int minIdx;
+      int minIdx, maxIdx;
       evals.minCoeff(&minIdx);
+      evals.maxCoeff(&maxIdx);
 
-      return evecs.col(minIdx).normalized();
+      normal = evecs.col(minIdx).normalized();
+      // magic number assures that there is sufficient uncertainty in one direction
+      return evals[maxIdx] > 0.001;
     }
 
     void PcRrt::getAllCollidingShapes(::std::map<::std::string, bool>& collidingShapes)
