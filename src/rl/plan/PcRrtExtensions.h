@@ -12,6 +12,10 @@ namespace rl
   {
     class Gaussian {
     public:
+      Gaussian()
+      {
+      }
+
       Gaussian(const ::rl::math::Matrix& particles)
       {
         this->init(particles);
@@ -68,19 +72,23 @@ namespace rl
     class GaussianState
     {
     public:
-      GaussianState(const ::rl::math::Matrix& particles) :
+      GaussianState(const ::rl::math::Matrix& particles, const ::rl::math::Matrix& collisions) :
       gaussianDistr(particles),
       gen(42),
       inCollision(false)
       {
+        if(collisions.rows()>0)
+            collisionDistr = Gaussian(collisions);
         this->init();
       }
 
-      GaussianState(const ::std::vector<::rl::math::Vector>& particles) :
+      GaussianState(const ::std::vector<::rl::math::Vector>& particles, const ::std::vector<::rl::math::Vector>& collisions) :
       gaussianDistr(particles),
       gen(42),
       inCollision(false)
       {
+        if(collisions.size()>0)
+            collisionDistr = Gaussian(collisions);
         this->init();
       }
 
@@ -98,6 +106,13 @@ namespace rl
       {
         return this->gaussianDistr;
       }
+
+
+      Gaussian collisionGaussian()
+      {
+        return this->collisionDistr;
+      }
+
 
       ::rl::math::Vector mean()
       {
@@ -131,6 +146,7 @@ namespace rl
       }
 
       Gaussian gaussianDistr;
+      Gaussian collisionDistr;
       boost::random::mt19937 gen;
       ::std::vector<boost::random::normal_distribution<> > distributions;
       int dims;

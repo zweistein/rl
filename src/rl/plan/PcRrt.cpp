@@ -31,8 +31,8 @@ namespace rl
       Rrt()
     {
       // comment in for random seed
-      // this->gen = ::boost::make_shared<boost::random::mt19937>(std::time(0));
-      this->gen = ::boost::make_shared<boost::random::mt19937>(42);
+       this->gen = ::boost::make_shared<boost::random::mt19937>(std::time(0));
+      //this->gen = ::boost::make_shared<boost::random::mt19937>(42);
     }
 
     //Needed for Guarded moves
@@ -63,9 +63,10 @@ namespace rl
       this->begin[0] = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(*this->start));
       // set initial state based on one particle (covariance is zero)
       ::std::vector<::rl::math::Vector> v;
+      ::std::vector<::rl::math::Vector> c;
       v.push_back(*this->start);
       // uncertainty of 0 at starting configuration
-      this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(v);
+      this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(v,c);
 
       timer.start();
       timer.stop();
@@ -80,20 +81,21 @@ namespace rl
         Vertex chosenVertex = n.first;
 
         ::rl::math::Matrix particles;
+        ::rl::math::Matrix collisions;
 
         // randomly decide to do a slide or not
         boost::random::uniform_int_distribution<> doSlideDistr(0, 100);
-        bool doGuardedMove = doSlideDistr(*this->gen) < 30;
+        bool doGuardedMove = doSlideDistr(*this->gen) < 10;
         bool doSlide = doSlideDistr(*this->gen) > 70;
         // sample[...]Particles will return false if the particle set is not useful
         bool sampleResult;
         bool isInCollision = false;
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
-          sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
+          sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles, collisions, isInCollision);
         else if (doGuardedMove)
-          sampleResult = this->sampleGuardedParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
+          sampleResult = this->sampleGuardedParticles(n, chosenSample, this->nrParticles, particles, collisions, isInCollision);
         else
-          sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
+          sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, particles, collisions, isInCollision);
 
 
         if (sampleResult)
@@ -101,12 +103,25 @@ namespace rl
           // visualize particles
           this->drawParticles(particles);
           // fit a gaussian to the particles
-          Gaussian gaussian(particles);
-          this->drawEigenvectors(gaussian);
+          Gaussian configGaussian(particles);
+
+          Gaussian collisionPointGaussian;
+          if(isInCollision)
+          {
+            // visualize particles
+            //this->drawParticles(collisions);
+            // fit a gaussian to the collision points
+            collisionPointGaussian = Gaussian(collisions);
+            this->drawEigenvectors(collisionPointGaussian);
+          }
+          else
+            this->drawEigenvectors(configGaussian);
+
+
 
           // add a new vertex and edge
-          Vertex newVertex = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(gaussian.mean));
-          this->tree[0][newVertex].gState = ::boost::make_shared<GaussianState>(particles);
+          Vertex newVertex = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(configGaussian.mean));
+          this->tree[0][newVertex].gState = ::boost::make_shared<GaussianState>(particles, collisions);
           this->tree[0][newVertex].gState->setColliding(isInCollision);
           this->addEdge(chosenVertex, newVertex, this->tree[0]);
 
@@ -357,9 +372,10 @@ namespace rl
     /**
             Samples a set of particles for a move through free-space to a target configuration (chosen)
           */
-    bool PcRrt::sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision)
+    bool PcRrt::sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles,  ::rl::math::Matrix& collisions, bool& isInCollision)
     {
       particles.resize(nrParticles, this->model->getDof());
+      collisions.resize(nrParticles, 3);
 
       int rowIdx = 0;
 
@@ -434,6 +450,7 @@ namespace rl
 
           // valid particle, store it
           particles.row(rowIdx) = nextStep;
+          collisions.row(rowIdx) = this->solidScene->lastCollisionPoint();
           rowIdx++;
           isInCollision = true;
         }
@@ -448,11 +465,12 @@ namespace rl
     }
 
     /**
-            Samples a set of particles for a move through free-space into a contact state.
-          */
-    bool PcRrt::sampleGuardedParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision)
+       Samples a set of particles for a move through free-space into a contact state.
+    */
+    bool PcRrt::sampleGuardedParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, ::rl::math::Matrix& collisions, bool& isInCollision)
     {
       particles.resize(nrParticles, this->model->getDof());
+      collisions.resize(nrParticles, 3);
 
       int rowIdx = 0;
 
@@ -514,6 +532,7 @@ namespace rl
 
           // valid particle, store it
           particles.row(rowIdx) = nextStep;
+          collisions.row(rowIdx) = this->solidScene->lastCollisionPoint();
           rowIdx++;
         }
         else
@@ -538,7 +557,7 @@ namespace rl
     /**
             Samples a set of particles for a sliding move along a surface.
           */
-    bool PcRrt::sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision)
+    bool PcRrt::sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, ::rl::math::Matrix& collisions, bool& isInCollision)
     {
       if (!this->tree[0][nearest.first].gState->isInCollision())
       {
@@ -547,6 +566,7 @@ namespace rl
       }
 
       particles.resize(nrParticles, this->model->getDof());
+      collisions.resize(nrParticles, 3);
 
       // project chosen on the plane
       ::rl::math::Vector normal = this->getNormal(nearest.first);
@@ -699,6 +719,8 @@ namespace rl
 
         // valid particle, store it
         particles.row(rowIdx) = nextStep;
+        if (finalCollision != "lost_contact")
+          collisions.row(rowIdx) = this->solidScene->lastCollisionPoint();
         rowIdx++;
       }
 
@@ -829,26 +851,40 @@ namespace rl
       ::rl::math::Vector eigen1 = vectors.col(0) * sqrt(values(0)) * scale;
       ::rl::math::Vector eigen2 = vectors.col(1) * sqrt(values(1)) * scale;
 
-      this->model->setPosition(gaussian.mean);
-      this->model->updateFrames();
-      const ::rl::math::Transform& t1 = this->model->forwardPosition();
-      start(0) = t1.translation().x();
-      start(1) = t1.translation().y();
-      start(2) = t1.translation().z();
+      if(gaussian.mean.rows()==3)
+      {
+        start = gaussian.mean;
+        end1 = gaussian.mean + eigen1;
+        end2 = gaussian.mean + eigen2;
+      }
+      else
+      {
+        this->model->setPosition(gaussian.mean);
+        this->model->updateFrames();
+        const ::rl::math::Transform& t1 = this->model->forwardPosition();
+        start(0) = t1.translation().x();
+        start(1) = t1.translation().y();
+        start(2) = t1.translation().z();
 
-      this->model->setPosition(gaussian.mean + eigen1);
-      this->model->updateFrames();
-      const ::rl::math::Transform& t2 = this->model->forwardPosition();
-      end1(0) = t2.translation().x();
-      end1(1) = t2.translation().y();
-      end1(2) = t2.translation().z();
 
-      this->model->setPosition(gaussian.mean + eigen2);
-      this->model->updateFrames();
-      const ::rl::math::Transform& t3 = this->model->forwardPosition();
-      end2(0) = t3.translation().x();
-      end2(1) = t3.translation().y();
-      end2(2) = t3.translation().z();
+        this->model->setPosition(gaussian.mean + eigen1);
+        this->model->updateFrames();
+        const ::rl::math::Transform& t2 = this->model->forwardPosition();
+        end1(0) = t2.translation().x();
+        end1(1) = t2.translation().y();
+        end1(2) = t2.translation().z();
+
+
+        this->model->setPosition(gaussian.mean + eigen2);
+        this->model->updateFrames();
+        const ::rl::math::Transform& t3 = this->model->forwardPosition();
+        end2(0) = t3.translation().x();
+        end2(1) = t3.translation().y();
+        end2(2) = t3.translation().z();
+      }
+
+
+
 
       this->viewer->drawLine(start, end1);
       this->viewer->drawLine(start, end2);

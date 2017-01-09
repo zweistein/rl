@@ -64,9 +64,9 @@ namespace rl
       virtual bool solve();
 
       //void sampleDirection(::rl::math::Vector& rd);
-      bool sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision);
-      bool sampleGuardedParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision);
-      bool sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision);
+      bool sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, ::rl::math::Matrix& collisions, bool& isInCollision);
+      bool sampleGuardedParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, ::rl::math::Matrix& collisions, bool& isInCollision);
+      bool sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, ::rl::math::Matrix& collisions, bool& isInCollision);
       bool sampleGoalParticles(const Neighbor& nearest, ::rl::math::Vector& goal, int nrParticles, ::rl::math::Matrix& particles);
 
       bool projectOnSurface(const ::rl::math::Vector& point, const ::rl::math::Vector& pointOnSurface, const ::rl::math::Vector& normal, ::rl::math::Vector& out);
