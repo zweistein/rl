@@ -35,28 +35,28 @@
 
 namespace rl
 {
-	namespace plan
-	{
-        class NoisyModel : public DistanceModel
-		{
-		public:
-            NoisyModel();
-			
+  namespace plan
+  {
+    class NoisyModel : public DistanceModel
+    {
+    public:
+      NoisyModel();
+      
 
-            virtual ~NoisyModel();
+      virtual ~NoisyModel();
 
-            void sampleMotionError(::rl::math::Vector &error);
+      void sampleMotionError(::rl::math::Vector &error);
 
-            void interpolateNoisy(const ::rl::math::Vector& q1, const ::rl::math::Vector& q2, const ::rl::math::Real& alpha, const ::rl::math::Vector& noise, ::rl::math::Vector& q) const;
+      void interpolateNoisy(const ::rl::math::Vector& q1, const ::rl::math::Vector& q2, const ::rl::math::Real& alpha, const ::rl::math::Vector& noise, ::rl::math::Vector& q) const;
 
 
-            ::rl::math::Vector* motionError;
+      ::rl::math::Vector* motionError;
 
-         private:
-            ::boost::shared_ptr<::boost::random::mt19937> motionErrorGen;
+     private:
+      ::boost::shared_ptr<::boost::random::mt19937> motionErrorGen;
 
-		};
-	}
+    };
+  }
 }
 
 #endif // _RL_PLAN_NOISYMODEL_H_
