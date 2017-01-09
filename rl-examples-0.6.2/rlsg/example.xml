@@ -8,10 +8,12 @@
 		</model>
 		<model name="obstacles">
 			<body name="floor"/>
+			<body name="wall"/>
+			<!--
 			<body name="obstacle1"/>
 			<body name="obstacle2"/>
 			<body name="obstacle3"/>
-			<body name="obstacle4"/>
+			<body name="obstacle4"/>-->
 		</model>
 	</scene>
 </rlsg>

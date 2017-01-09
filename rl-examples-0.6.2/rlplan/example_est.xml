@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rlplan xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="rlplan.xsd">
   <pcRrt>
-    <duration>120</duration>
+    <duration>60</duration>
     <delta>0.1</delta>
     <stepUncertainty>0.01</stepUncertainty>
     <uncertaintyThreshold>0.2</uncertaintyThreshold>
     <goal>
-      <q unit="deg">50</q>
-      <q unit="deg">-50</q>
+      <q unit="deg">110</q>
+      <q unit="deg">30</q>
     </goal>
     <model>
       <kinematics href="../rlkin/example.xml"/>
@@ -60,6 +60,13 @@
       </size>
       <wait/>
     </viewer>
+    <delta>0.01</delta>
+    <nrParticles>20</nrParticles>
+    <motionError>
+      <q>0.05</q>
+      <q>0.05</q>
+    </motionError>
+    <goalEpsilon>0.001</goalEpsilon>
     <uniformSampler/>
     <recursiveVerifier>
       <delta unit="deg">1</delta>
