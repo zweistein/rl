@@ -90,7 +90,7 @@ namespace rl
         bool isInCollision = false;
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
           sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
-        else if (doGuardedMove && this->tree[0][n.first].gState->isInCollision())
+        else if (doGuardedMove)
           sampleResult = this->sampleGuardedParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
         else
           sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
@@ -834,21 +834,21 @@ namespace rl
       const ::rl::math::Transform& t1 = this->model->forwardPosition();
       start(0) = t1.translation().x();
       start(1) = t1.translation().y();
-      start(2) = 0.6;
+      start(2) = t1.translation().z();
 
       this->model->setPosition(gaussian.mean + eigen1);
       this->model->updateFrames();
       const ::rl::math::Transform& t2 = this->model->forwardPosition();
       end1(0) = t2.translation().x();
       end1(1) = t2.translation().y();
-      end1(2) = 0.6;
+      end1(2) = t2.translation().z();
 
       this->model->setPosition(gaussian.mean + eigen2);
       this->model->updateFrames();
       const ::rl::math::Transform& t3 = this->model->forwardPosition();
       end2(0) = t3.translation().x();
       end2(1) = t3.translation().y();
-      end2(2) = 0.6;
+      end2(2) = t3.translation().z();
 
       this->viewer->drawLine(start, end1);
       this->viewer->drawLine(start, end2);
