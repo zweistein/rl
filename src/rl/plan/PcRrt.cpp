@@ -355,8 +355,8 @@ namespace rl
     }
 
     /**
-            Samples a set of particles for a move through free-space to a target configuration (chosen)
-          */
+      Samples a set of particles for a move through free-space to a target configuration (chosen)
+    */
     bool PcRrt::sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision)
     {
       particles.resize(nrParticles, this->model->getDof());
@@ -448,8 +448,8 @@ namespace rl
     }
 
     /**
-            Samples a set of particles for a move through free-space into a contact state.
-          */
+      Samples a set of particles for a move through free-space into a contact state.
+    */
     bool PcRrt::sampleGuardedParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision)
     {
       particles.resize(nrParticles, this->model->getDof());
@@ -536,8 +536,8 @@ namespace rl
 
 
     /**
-            Samples a set of particles for a sliding move along a surface.
-          */
+      Samples a set of particles for a sliding move along a surface.
+    */
     bool PcRrt::sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision)
     {
       if (!this->tree[0][nearest.first].gState->isInCollision())
@@ -550,16 +550,39 @@ namespace rl
 
       // project chosen on the plane
       ::rl::math::Vector normal = this->getNormal(nearest.first);
-      ::rl::math::Vector p_vec = *(this->tree[0][nearest.first].q);
+      ::rl::math::Vector pVec = *(this->tree[0][nearest.first].q);
       ::rl::math::Vector goal;
-      double dist = projectOnSurface(chosen, p_vec, normal, goal);
+      double dist = projectOnSurface(chosen, pVec, normal, goal);
       if (dist < 0)
       {
         dist *= -1;
         normal *= -1;
       }
 
-      // this->drawSurfaceNormal(pVec, normal);
+      // retrieve direction of normal
+      ::rl::math::Vector testPoint(this->model->getDof());
+      testPoint = pVec + normal*this->delta;
+      this->model->setPosition(testPoint);
+      this->model->updateFrames();
+      if (this->model->isColliding()) 
+      {
+        // inverse normal
+        normal *= -1;
+      }
+      else
+      {
+        testPoint = pVec - normal*this->delta;
+        this->model->setPosition(testPoint);
+        this->model->updateFrames();
+        if (!this->model->isColliding())
+        {
+          // no collision in any direction, this is bad
+          std::cout << "error getting normal direction" << std::endl;
+          return false;
+        }
+      }
+
+      this->drawSurfaceNormal(pVec, normal);
 
       int rowIdx = 0;
       std::string shape1, shape2;
@@ -574,7 +597,7 @@ namespace rl
         do
         {
           this->tree[0][nearest.first].gState->sample(init);
-          projectOnSurface(init, p_vec, normal, init);
+          projectOnSurface(init, pVec, normal, init);
           this->model->setPosition(init);
           this->model->updateFrames();
         }
@@ -584,7 +607,7 @@ namespace rl
         //Sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
         this->model->sampleMotionError(motionNoise);
-        projectOnSurface(motionNoise, p_vec, normal, motionNoise);
+        projectOnSurface(motionNoise, pVec, normal, motionNoise);
 
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->mean();
 
