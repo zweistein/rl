@@ -69,6 +69,8 @@ namespace rl
       bool sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision);
       bool sampleGoalParticles(const Neighbor& nearest, ::rl::math::Vector& goal, int nrParticles, ::rl::math::Matrix& particles);
 
+      bool projectOnSurface(const ::rl::math::Vector& point, const ::rl::math::Vector& pointOnSurface, const ::rl::math::Vector& normal, ::rl::math::Vector& out);
+
       void getAllCollidingShapes(::std::map<::std::string, bool>& collidingShapes);
       void getPath(VectorList& path);
       ::rl::math::Vector getNormal(const Vertex& vertex);

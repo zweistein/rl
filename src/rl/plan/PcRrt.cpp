@@ -540,6 +540,12 @@ bool PcRrt::sampleGuardedParticles(const Neighbor& nearest, const ::rl::math::Ve
     return true;
 }
 
+bool PcRrt::projectOnSurface(const ::rl::math::Vector& point, const ::rl::math::Vector& pointOnSurface, const ::rl::math::Vector& normal, ::rl::math::Vector& out)
+{
+    double dist = (point-pointOnSurface).dot(normal);
+    out = point-dist*normal;
+    return dist;
+}
 
 
 /**
@@ -550,15 +556,16 @@ bool PcRrt::sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Ve
     particles.resize(nrParticles, this->model->getDof());
 
     //project chosen on the plane
+
     ::rl::math::Vector normal = this->getNormal(nearest.first);
     ::rl::math::Vector p_vec = *(this->tree[0][nearest.first].q);
-    double dist = (chosen-p_vec).dot(normal);
+    ::rl::math::Vector goal;
+    double dist = projectOnSurface(chosen, p_vec, normal, goal);
     if(dist<0)
     {
         dist*=-1;
         normal*=-1;
     }
-    ::rl::math::Vector goal = chosen-dist*normal;
 
 
     //this->drawSurfaceNormal(p_vec, normal);
@@ -576,7 +583,7 @@ bool PcRrt::sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Ve
         do
         {
             this->tree[0][nearest.first].gState->sample(init);
-            Particle nextStep = init;
+            projectOnSurface(init, p_vec, normal, init);
             this->model->setPosition(init);
             this->model->updateFrames();
         }
@@ -586,6 +593,7 @@ bool PcRrt::sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Ve
         //Sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
         this->model->sampleMotionError(motionNoise);
+        projectOnSurface(motionNoise, p_vec, normal, motionNoise);
 
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->mean();
 
