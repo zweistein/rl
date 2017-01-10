@@ -73,7 +73,7 @@ namespace rl
 
       void getAllCollidingShapes(::std::map<::std::string, bool>& collidingShapes);
       void getPath(VectorList& path);
-      ::rl::math::Vector getNormal(const Vertex& vertex);
+      bool getNormal(const Vertex& vertex, ::rl::math::Vector& normal);
       void drawParticles(::rl::math::Matrix& particles);
       void drawEigenvectors(Gaussian& gaussian, ::rl::math::Real scale = 1.0);
       void drawSurfaceNormal(::rl::math::Vector& startPoint, ::rl::math::Vector& normal, ::rl::math::Real scale = 1.0);

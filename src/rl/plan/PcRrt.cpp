@@ -91,11 +91,17 @@ namespace rl
         bool sampleResult;
         bool isInCollision = false;
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
+        {
           sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles, collisions, isInCollision);
+        }
         else if (doGuardedMove)
+        {
           sampleResult = this->sampleGuardedParticles(n, chosenSample, this->nrParticles, particles, collisions, isInCollision);
+        }
         else
+        {
           sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, particles, collisions, isInCollision);
+        }
 
 
         if (sampleResult)
@@ -164,8 +170,8 @@ namespace rl
     }
 
     /**
-            This is just the connect function of the RRT, but it does not insert a node into the tree.
-          */
+      This is just the connect function of the RRT, but it does not insert a node into the tree.
+    */
     VectorPtr PcRrt::tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen)
     {
       ::rl::math::Real distance = nearest.second;
@@ -370,9 +376,9 @@ namespace rl
     }
 
     /**
-            Samples a set of particles for a move through free-space to a target configuration (chosen)
-          */
-    bool PcRrt::sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles,  ::rl::math::Matrix& collisions, bool& isInCollision)
+      Samples a set of particles for a move through free-space to a target configuration (chosen)
+    */
+    bool PcRrt::sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, ::rl::math::Matrix& collisions, bool& isInCollision)
     {
       particles.resize(nrParticles, this->model->getDof());
       collisions.resize(nrParticles, 3);
@@ -465,7 +471,7 @@ namespace rl
     }
 
     /**
-       Samples a set of particles for a move through free-space into a contact state.
+      Samples a set of particles for a move through free-space into a contact state.
     */
     bool PcRrt::sampleGuardedParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, ::rl::math::Matrix& collisions, bool& isInCollision)
     {
@@ -555,8 +561,8 @@ namespace rl
 
 
     /**
-            Samples a set of particles for a sliding move along a surface.
-          */
+      Samples a set of particles for a sliding move along a surface.
+    */
     bool PcRrt::sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, ::rl::math::Matrix& collisions, bool& isInCollision)
     {
       if (!this->tree[0][nearest.first].gState->isInCollision())
@@ -569,17 +575,47 @@ namespace rl
       collisions.resize(nrParticles, 3);
 
       // project chosen on the plane
-      ::rl::math::Vector normal = this->getNormal(nearest.first);
-      ::rl::math::Vector p_vec = *(this->tree[0][nearest.first].q);
+      ::rl::math::Vector normal(this->model->getDof());
+      if (!this->getNormal(nearest.first, normal))
+      {
+        // uncertainty distribution insufficient for retrieving normal
+        std::cout << "uncertainty distribution insufficient for retrieving normal" << std::endl;
+        return false;
+      }
+      ::rl::math::Vector pVec = *(this->tree[0][nearest.first].q);
       ::rl::math::Vector goal;
-      double dist = projectOnSurface(chosen, p_vec, normal, goal);
+      double dist = projectOnSurface(chosen, pVec, normal, goal);
+
       if (dist < 0)
       {
         dist *= -1;
         normal *= -1;
       }
 
-      // this->drawSurfaceNormal(pVec, normal);
+      // retrieve direction of normal
+      ::rl::math::Vector testPoint(this->model->getDof());
+      testPoint = pVec + normal*this->delta;
+      this->model->setPosition(testPoint);
+      this->model->updateFrames();
+      if (this->model->isColliding()) 
+      {
+        // inverse normal
+        normal *= -1;
+      }
+      else
+      {
+        testPoint = pVec - normal*this->delta;
+        this->model->setPosition(testPoint);
+        this->model->updateFrames();
+        if (!this->model->isColliding())
+        {
+          // no collision in any direction, this is bad
+          std::cout << "error getting normal direction" << std::endl;
+          return false;
+        }
+      }
+
+      //this->drawSurfaceNormal(pVec, normal);
 
       int rowIdx = 0;
       std::string shape1, shape2;
@@ -594,7 +630,7 @@ namespace rl
         do
         {
           this->tree[0][nearest.first].gState->sample(init);
-          projectOnSurface(init, p_vec, normal, init);
+          projectOnSurface(init, pVec, normal, init);
           this->model->setPosition(init);
           this->model->updateFrames();
         }
@@ -604,7 +640,7 @@ namespace rl
         //Sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
         this->model->sampleMotionError(motionNoise);
-        projectOnSurface(motionNoise, p_vec, normal, motionNoise);
+        projectOnSurface(motionNoise, pVec, normal, motionNoise);
 
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->mean();
 
@@ -797,15 +833,18 @@ namespace rl
       return true;
     }
 
-    ::rl::math::Vector PcRrt::getNormal(const Vertex& vertex)
+    bool PcRrt::getNormal(const Vertex& vertex, ::rl::math::Vector& normal)
     {
       ::rl::math::Vector evals = this->tree[0][vertex].gState->gaussian().eigenvalues();
       ::rl::math::Matrix evecs = this->tree[0][vertex].gState->gaussian().eigenvectors();
 
-      int minIdx;
+      int minIdx, maxIdx;
       evals.minCoeff(&minIdx);
+      evals.maxCoeff(&maxIdx);
 
-      return evecs.col(minIdx).normalized();
+      normal = evecs.col(minIdx).normalized();
+      // magic number assures that there is sufficient uncertainty in one direction
+      return evals[maxIdx] > 0.001;
     }
 
     void PcRrt::getAllCollidingShapes(::std::map<::std::string, bool>& collidingShapes)
