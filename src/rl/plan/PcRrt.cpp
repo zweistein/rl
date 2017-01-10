@@ -552,11 +552,11 @@ namespace rl
       return true;
     }
 
-    bool PcRrt::projectOnSurface(const ::rl::math::Vector& point, const ::rl::math::Vector& pointOnSurface, const ::rl::math::Vector& normal, ::rl::math::Vector& out)
+    ::rl::math::Vector PcRrt::projectOnSurface(const ::rl::math::Vector& point, const ::rl::math::Vector& pointOnSurface, const ::rl::math::Vector& normal)
     {
       double dist = (point-pointOnSurface).dot(normal);
-      out = point-dist*normal;
-      return dist;
+      ::rl::math::Vector out = point-dist*normal;
+      return out;
     }
 
 
@@ -583,42 +583,11 @@ namespace rl
         return false;
       }
       ::rl::math::Vector pVec = *(this->tree[0][nearest.first].q);
-      ::rl::math::Vector goal;
-      double dist = projectOnSurface(chosen, pVec, normal, goal);
-
-      if (dist < 0)
-      {
-        dist *= -1;
-        normal *= -1;
-      }
-
-      // retrieve direction of normal
-      ::rl::math::Vector testPoint(this->model->getDof());
-      testPoint = pVec + normal*this->delta;
-      this->model->setPosition(testPoint);
-      this->model->updateFrames();
-      if (this->model->isColliding()) 
-      {
-        // inverse normal
-        normal *= -1;
-      }
-      else
-      {
-        testPoint = pVec - normal*this->delta;
-        this->model->setPosition(testPoint);
-        this->model->updateFrames();
-        if (!this->model->isColliding())
-        {
-          // no collision in any direction, this is bad
-          std::cout << "error getting normal direction" << std::endl;
-          return false;
-        }
-      }
+      ::rl::math::Vector goal = projectOnSurface(chosen, pVec, normal);
 
       //this->drawSurfaceNormal(pVec, normal);
 
       int rowIdx = 0;
-      std::string shape1, shape2;
       std::string finalCollision = "";
 
       while (rowIdx < nrParticles)
@@ -630,7 +599,7 @@ namespace rl
         do
         {
           this->tree[0][nearest.first].gState->sample(init);
-          projectOnSurface(init, pVec, normal, init);
+          init = projectOnSurface(init, pVec, normal);
           this->model->setPosition(init);
           this->model->updateFrames();
         }
@@ -640,7 +609,7 @@ namespace rl
         //Sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
         this->model->sampleMotionError(motionNoise);
-        projectOnSurface(motionNoise, pVec, normal, motionNoise);
+        motionNoise = projectOnSurface(motionNoise, pVec, normal);
 
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->mean();
 
@@ -842,9 +811,38 @@ namespace rl
       evals.minCoeff(&minIdx);
       evals.maxCoeff(&maxIdx);
 
-      normal = evecs.col(minIdx).normalized();
       // magic number assures that there is sufficient uncertainty in one direction
-      return evals[maxIdx] > 0.001;
+      if(evals[maxIdx] < 0.001)
+          return false;
+
+      normal = evecs.col(minIdx).normalized();
+
+      ::rl::math::Vector pVec = *(this->tree[0][vertex].q);
+
+      // retrieve direction of normal
+      ::rl::math::Vector testPoint(this->model->getDof());
+      testPoint = pVec + normal*this->delta;
+      this->model->setPosition(testPoint);
+      this->model->updateFrames();
+      if (this->model->isColliding())
+      {
+        // invert normal
+        normal *= -1;
+      }
+      else
+      {
+        testPoint = pVec - normal*this->delta;
+        this->model->setPosition(testPoint);
+        this->model->updateFrames();
+        if (!this->model->isColliding())
+        {
+          // no collision in any direction, this is bad
+          std::cout << "error getting normal direction" << std::endl;
+          return false;
+        }
+      }
+
+      return true;
     }
 
     void PcRrt::getAllCollidingShapes(::std::map<::std::string, bool>& collidingShapes)
