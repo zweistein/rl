@@ -69,6 +69,8 @@ namespace rl
 				::rl::sg::Shape* raycast(const ::rl::math::Vector3& source, const ::rl::math::Vector3& target, ::rl::math::Real& distance);
 				
 				bool raycast(::rl::sg::Shape* shape, const ::rl::math::Vector3& source, const ::rl::math::Vector3& target, ::rl::math::Real& distance);
+
+				bool getCollisionSurfaceNormal(const ::rl::math::Vector3& from, ::rl::math::Vector3& normalVector);
 				
 				void setMargin(const ::rl::math::Real& margin);
 				

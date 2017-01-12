@@ -32,6 +32,8 @@
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/VRMLnodes/SoVRMLGroup.h>
 
+#include <rl/math/Vector.h>
+
 #include "Shape.h"
 
 namespace rl
@@ -70,13 +72,13 @@ namespace rl
 			virtual void setName(const ::std::string& name);
 
 			virtual void lastCollidingShapes(::std::string& first, ::std::string& second);
+
+			virtual bool getCollisionSurfaceNormal(const ::rl::math::Vector3& from, ::rl::math::Vector3& normalVector);
 			
 		protected:
 			bool isScalingSupported;
 			
 			::std::vector< Model* > models;
-
-			// int lastCollidingShape1;
 			
 		private:
 			static void triangleCallback(void* userData, SoCallbackAction* action, const SoPrimitiveVertex* v1, const SoPrimitiveVertex* v2, const SoPrimitiveVertex* v3);

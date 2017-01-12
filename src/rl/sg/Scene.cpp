@@ -361,5 +361,11 @@ namespace rl
 		{
 			throw Exception("void lastCollidingShapes(::std::string& first, ::std::string& second)");
 		}
+
+		bool
+		Scene::getCollisionSurfaceNormal(const ::rl::math::Vector3& from, ::rl::math::Vector3& normalVector)
+		{
+			throw Exception("bool getSurfaceNormal(::rl::sg::Shape *shape, const ::rl::math::Vector3& source, const ::rl::math::Vector3& target, ::rl::math::Vector3& normalVector)");
+		}
 	}
 }
