@@ -14,18 +14,17 @@ namespace rl
     public:
       Gaussian(const ::rl::math::Matrix& particles)
       {
-        this->init(particles);
-      }
-
-      Gaussian(const ::std::vector<::rl::math::Vector>& particles)
-      {
-        ::rl::math::Matrix p;
-        p.resize(particles.size(), particles[0].size());
-        for (int i = 0; i < particles.size(); ++i)
+        this->mean = particles.colwise().mean();
+        if (particles.rows() == 1)
         {
-          p.row(i) = particles[i];
+          // just one particle
+          this->covariance = ::rl::math::Matrix::Zero(particles.cols(), particles.cols());
+          return;
         }
-        this->init(p);
+        // substract mean
+        ::rl::math::Matrix centered = particles.rowwise() - this->mean.transpose();
+        // calculate sample covariance
+        this->covariance = centered.transpose() * centered / (particles.rows()-1);
       }
 
       ::rl::math::Real mahalanobis(::rl::math::Vector& x)
@@ -47,41 +46,24 @@ namespace rl
 
       ::rl::math::Vector mean;
       ::rl::math::Matrix covariance;
-
-    private:
-      void init(const ::rl::math::Matrix& particles)
-      {
-        this->mean = particles.colwise().mean();
-        if (particles.rows() == 1)
-        {
-          // just one particle
-          this->covariance = ::rl::math::Matrix::Zero(particles.cols(), particles.cols());
-          return;
-        }
-        // substract mean
-        ::rl::math::Matrix centered = particles.rowwise() - this->mean.transpose();
-        // calculate sample covariance
-        this->covariance = centered.transpose() * centered / (particles.rows()-1);
-      }
     };
 
     class GaussianState
     {
     public:
       GaussianState(const ::rl::math::Matrix& particles) :
+      part(particles),
       gaussianDistr(particles),
       gen(42),
       inCollision(false)
       {
-        this->init();
-      }
-
-      GaussianState(const ::std::vector<::rl::math::Vector>& particles) :
-      gaussianDistr(particles),
-      gen(42),
-      inCollision(false)
-      {
-        this->init();
+        this->dims = this->gaussianDistr.covariance.rows();
+        for (int i = 0; i < this->dims; ++i)
+        {
+          ::rl::math::Real mean = this->gaussianDistr.mean[i];
+          ::rl::math::Real std_dev = sqrt(this->gaussianDistr.covariance(i,i));
+          distributions.push_back(boost::random::normal_distribution<>(mean, std_dev));
+        }
       }
 
       void sample(::rl::math::Vector& q)
@@ -99,12 +81,17 @@ namespace rl
         return this->gaussianDistr;
       }
 
-      ::rl::math::Vector mean()
+      ::rl::math::Matrix& particles()
+      {
+        return this->part;
+      }
+
+      ::rl::math::Vector& mean()
       {
         return this->gaussianDistr.mean;
       }
 
-      ::rl::math::Matrix covariance()
+      ::rl::math::Matrix& covariance()
       {
         return this->gaussianDistr.covariance;
       }
@@ -118,18 +105,9 @@ namespace rl
       {
         return this->inCollision;
       }
-    private:
-      void init()
-      {
-        this->dims = this->gaussianDistr.covariance.rows();
-        for (int i = 0; i < this->dims; ++i)
-        {
-          ::rl::math::Real mean = this->gaussianDistr.mean[i];
-          ::rl::math::Real std_dev = sqrt(this->gaussianDistr.covariance(i,i));
-          distributions.push_back(boost::random::normal_distribution<>(mean, std_dev));
-        }
-      }
 
+    private:
+      ::rl::math::Matrix part;
       Gaussian gaussianDistr;
       boost::random::mt19937 gen;
       ::std::vector<boost::random::normal_distribution<> > distributions;

@@ -63,6 +63,8 @@ namespace rl
     protected:
       virtual bool solve();
 
+      Neighbor nearest(const Tree& tree, const ::rl::math::Vector& chosen);
+
       //void sampleDirection(::rl::math::Vector& rd);
       bool sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision);
       bool sampleGuardedParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision);

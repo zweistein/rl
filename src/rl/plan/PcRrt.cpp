@@ -2,6 +2,7 @@
 #include <cmath>
 #include <ctime>
 #include <fstream>
+#include <set>
 
 #include <boost/make_shared.hpp>
 #include <boost/random.hpp>
@@ -62,10 +63,10 @@ namespace rl
       // add the start configuation
       this->begin[0] = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(*this->start));
       // set initial state based on one particle (covariance is zero)
-      ::std::vector<::rl::math::Vector> v;
-      v.push_back(*this->start);
-      // uncertainty of 0 at starting configuration
-      this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(v);
+      ::rl::math::Matrix p;
+      p.resize(1, this->model->getDof());
+      p.row(0) = *this->start;
+      this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(p);
 
       timer.start();
       timer.stop();
@@ -152,6 +153,69 @@ namespace rl
       }
 
       return false;
+    }
+
+    PcRrt::Neighbor PcRrt::nearest(const Tree& tree, const ::rl::math::Vector& chosen)
+    {
+      struct NeighborCompare
+      {
+        bool operator()(const Neighbor& lhs, const Neighbor& rhs) const
+        {
+          return lhs.second < rhs.second;
+        }
+      };
+
+      std::set<Neighbor, NeighborCompare> neighbors;
+ 
+      for (VertexIteratorPair i = ::boost::vertices(tree); i.first != i.second; ++i.first)
+      {
+        ::rl::math::Real d = this->model->transformedDistance(chosen, *tree[*i.first].q);
+        neighbors.insert(Neighbor(*i.first, d));
+      }
+
+      Neighbor bestNeighbor(nullptr, ::std::numeric_limits<::rl::math::Real>::max());
+      
+      int tested = 0;
+      for (auto n = neighbors.begin(); n != neighbors.end() && tested < 5; ++n)
+      {
+        const auto& vertex = (*n).first;
+        const auto& mean = tree[vertex].gState->mean();
+        const auto& particles = tree[vertex].gState->particles();
+        const ::rl::math::Real distance = this->model->distance(mean, chosen);
+
+        ::rl::math::Matrix movedParticles;
+        movedParticles.resize(particles.rows(), particles.cols());
+
+        for (int rowIdx = 0; rowIdx < particles.rows(); ++rowIdx)
+        {
+          ::rl::math::Vector motionNoise(this->model->getDof());
+          this->model->sampleMotionError(motionNoise);
+
+          auto particle = particles.row(rowIdx).transpose();
+          auto particleOffset = particle - mean;
+          auto shiftedChosen = chosen + particleOffset;
+          
+          ::rl::math::Vector dest(this->model->getDof());
+          this->model->interpolateNoisy(particle, shiftedChosen, distance, motionNoise, dest);
+
+          movedParticles.row(rowIdx) = dest;
+        }
+
+        Gaussian g(movedParticles);
+        ::rl::math::Real metric = g.eigenvalues().sum();
+        if (metric < bestNeighbor.second)
+        {
+          bestNeighbor.first = vertex;
+          bestNeighbor.second = metric;
+        }
+
+        tested++;
+      }
+
+      // auto p = *neighbors.begin();
+      // p.second = this->model->inverseOfTransformedDistance(p.second);
+      
+      return bestNeighbor;
     }
 
     /**
