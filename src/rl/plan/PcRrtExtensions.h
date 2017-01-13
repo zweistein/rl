@@ -78,14 +78,13 @@ namespace rl
     class Contact
     {
     public:
-      Contact(::rl::math::Vector3& p, ::rl::math::Vector3& n, std::string& sa, std::string& sb) :
+      Contact(::rl::math::Vector3& p, ::rl::math::Vector3& n, std::string& s_robot, std::string& s_env) :
         point(p),
         normal_env(n),
-        shape_robot(sa),
-        shape_env(sb)
+        shape_robot(s_robot),
+        shape_env(s_env)
       {}
 
-    private:
       ::rl::math::Vector3 point;
       std::string shape_robot;
       std::string shape_env;
@@ -151,6 +150,12 @@ namespace rl
       {
         return (this->particles[0].contacts.size() != 0);
       }
+
+      const ::std::vector<Particle>& getParticles()
+      {
+        return particles;
+      }
+
     private:
       void init(const ::std::vector<Particle>& particles)
       {

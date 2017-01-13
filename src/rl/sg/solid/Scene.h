@@ -80,6 +80,8 @@ namespace rl
 
         void resetCollisionBuffer(){lastCollisions.clear();}
 
+        bool getCollisionSurfaceNormal(const ::rl::math::Vector3& from, ::rl::math::Vector3& normalVector);
+
 				
 				BP_SceneHandle broad;
 				

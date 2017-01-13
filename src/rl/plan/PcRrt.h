@@ -76,7 +76,7 @@ namespace rl
       bool getNormal(const Vertex& vertex, ::rl::math::Vector& normal);
       void drawParticles(const ::std::vector<Particle>& particles);
       void drawEigenvectors(Gaussian& gaussian, ::rl::math::Real scale);
-      void drawSurfaceNormal(::rl::math::Vector& startPoint, ::rl::math::Vector& normal, ::rl::math::Real scale = 1.0);
+      void drawSurfaceNormal(::rl::math::Vector3& startPoint, ::rl::math::Vector3& normal, ::rl::math::Real scale = 1.0);
       virtual VectorPtr tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen);
       //void kMeans(const ::rl::math::Matrix& data, const int k, ::std::vector<::std::vector<::rl::math::Vector> >& clusters);
 
