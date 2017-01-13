@@ -19,8 +19,8 @@ Transform {
                   transparency 0.500000
                 }
               }
-              geometry Box {
-                size 0.500000 0.500000 0.500000
+              geometry Sphere {
+                radius 0.25
               }
             }
         }

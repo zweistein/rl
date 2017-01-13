@@ -44,7 +44,7 @@
 #include <rl/xml/Path.h>
 
 #include "Body.h"
-#include "Exception.h"
+
 #include "Model.h"
 #include "Scene.h"
 #include "Shape.h"
@@ -357,9 +357,9 @@ namespace rl
 		}
 
 		void
-		Scene::lastCollidingShapes(::std::string& first, ::std::string& second)
+    Scene::lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& first_vec, ::rl::math::Vector3& second_vec)
 		{
-			throw Exception("void lastCollidingShapes(::std::string& first, ::std::string& second)");
+      throw Exception("lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& first_vec, ::rl::math::Vector3& second_vec)");
 		}
 	}
 }

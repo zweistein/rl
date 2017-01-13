@@ -48,18 +48,19 @@ namespace rl
 		bool
 		SimpleScene::areColliding(Body* first, Body* second)
 		{
+      bool collision = false;
 			for (Body::Iterator i = first->begin(); i != first->end(); ++i)
 			{
 				for (Body::Iterator j = second->begin(); j != second->end(); ++j)
 				{
 					if (this->areColliding(*i, *j))
 					{
-						return true;
+            collision = true;
 					}
 				}
 			}
 			
-			return false;
+      return collision;
 		}
 		
 		bool

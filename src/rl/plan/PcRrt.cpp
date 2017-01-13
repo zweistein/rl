@@ -32,7 +32,7 @@ namespace rl
     {
       // comment in for random seed
       // this->gen = ::boost::make_shared<boost::random::mt19937>(std::time(0));
-      this->gen = ::boost::make_shared<boost::random::mt19937>(42);
+      this->gen = ::boost::make_shared<boost::random::mt19937>(43);
     }
 
     //Needed for Guarded moves
@@ -86,7 +86,7 @@ namespace rl
         bool doGuardedMove = doSlideDistr(*this->gen) < 30;
         bool doSlide = doSlideDistr(*this->gen) > 70;
         // sample[...]Particles will return false if the particle set is not useful
-        bool sampleResult;
+        bool sampleResult = false;
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
         {
           sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles);
@@ -425,13 +425,21 @@ namespace rl
         }
         else if (steps > 1 && collision)
         {
-          std::string s1, s2;
-          this->solidScene->lastCollidingShapes(s1, s2);
+          std::string s1="";
+          std::string s2="";
+          rl::sg::solid::Scene::CollisionMap collMap =  this->solidScene->getLastCollisions();
+
+          if(collMap.size()>1)
+          {
+            std::cout<<"Connect move ends in a state with two collisions - this should not happen!"<<std::endl;
+            return false;
+          }
+
           if (shape1 == "")
           {
             // first collision, init contact state shapes
-            shape1 = s1;
-            shape2 = s2;
+            shape1 = collMap.begin()->first.first;
+            shape2 = collMap.begin()->first.second;
           }
           else if (s1 != shape1 || s2 != shape2)
           {
@@ -440,11 +448,16 @@ namespace rl
           }
 
           // valid particle, store it
+          rl::math::Vector3 pa = collMap.begin()->second.first;
+          rl::math::Vector3 pb = collMap.begin()->second.second;
+
           std::vector<Contact> contacts;
-          rl::math::Vector3 contactPoint, normal; //TODO!!!!!!
+          rl::math::Vector3 contactPoint = 0.5*(pa+pb);
+          rl::math::Vector3 normal = pb-pa;
           contacts.push_back(Contact(contactPoint,normal,s1,s2));
           Particle p(nextStep, contacts);
           particles.push_back(p);
+
           pIdx++;
         }
         else
@@ -466,14 +479,13 @@ namespace rl
 
       int pIdx = 0;
 
-      std::vector<std::string> shapes1, shapes2;
       std::string shape1 = "";
       std::string shape2 = "";
 
       while (pIdx < nrParticles)
       {
         // sample a starting point from the gaussian
-        ::rl::math::Vector  init(this->model->getDof());
+        ::rl::math::Vector init(this->model->getDof());
         this->tree[0][nearest.first].gState->sampleConfiguration(init);
 
         ::rl::math::Vector  nextStep = init;
@@ -508,8 +520,16 @@ namespace rl
 
         if (steps > 1)
         {
-          std::string s1, s2;
-          this->solidScene->lastCollidingShapes(s1, s2);
+          std::string s1 = "";
+          std::string s2 = "";
+          rl::sg::solid::Scene::CollisionMap collMap =  this->solidScene->getLastCollisions();
+
+          if(collMap.size()>1)
+          {
+            std::cout<<"Guarded move ends in a state with two collisions - this should not happen!"<<std::endl;
+            return false;
+          }
+
           if (shape1 == "")
           {
             // first collision, init contact state shapes
@@ -523,11 +543,16 @@ namespace rl
           }
 
           // valid particle, store it
+          rl::math::Vector3 pa = collMap.begin()->second.first;
+          rl::math::Vector3 pb = collMap.begin()->second.second;
+
           std::vector<Contact> contacts;
-          rl::math::Vector3 contactPoint, normal; //TODO!!!!!!
+          rl::math::Vector3 contactPoint = 0.5*(pa+pb);
+          rl::math::Vector3 normal = pb-pa;
           contacts.push_back(Contact(contactPoint,normal,s1,s2));
           Particle p(nextStep, contacts);
           particles.push_back(p);
+
           pIdx++;
         }
         else
@@ -563,6 +588,7 @@ namespace rl
 
       // project chosen on the plane
       ::rl::math::Vector normal(this->model->getDof());
+
       if (!this->getNormal(nearest.first, normal))
       {
         // uncertainty distribution insufficient for retrieving normal
@@ -605,13 +631,10 @@ namespace rl
       this->drawSurfaceNormal(pVec, normal);
 
       int pIdx = 0;
-      std::string shape1, shape2;
-      std::string finalCollision = "";
-
       while (pIdx < nrParticles)
       {
         // sample a starting point
-        ::rl::math::Vector  init(this->model->getDof());
+        ::rl::math::Vector init(this->model->getDof());
 
         // must be in collision
         do
@@ -631,18 +654,19 @@ namespace rl
 
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->configMean();
 
-        std::string slidingSurface = "";
-        std::map<::std::string, bool> allColls;
-
+        rl::sg::solid::Scene::CollisionMap allColls = this->getAllCollidingShapes();;
         // aquire sliding surface
-        this->getAllCollidingShapes(allColls);
+
         if (allColls.size() != 1)
         {
           // we should not collide with more than one obstacle here, so this is a weird state
           std::cout << "weird slidingSurface init, abort" << std::endl;
           return false;
         }
-        slidingSurface = allColls.begin()->first;
+        std::string slidingSurfaceRobot = allColls.begin()->first.first;
+        std::string slidingSurfaceEnv = allColls.begin()->first.second;
+        std::pair<std::string, std::string> slidingPair(slidingSurfaceRobot, slidingSurfaceEnv);
+
 
         ::rl::math::Vector initialError = init - mean;
         ::rl::math::Vector target = goal + initialError;
@@ -664,9 +688,9 @@ namespace rl
 
           if (this->model->isColliding())
           {
-            this->getAllCollidingShapes(allColls);
+            allColls = this->getAllCollidingShapes();
 
-            if (allColls[slidingSurface])
+            if (allColls.find(slidingPair) != allColls.end())
             {
               // we moved into sliding surface, so reflect out
               do
@@ -675,12 +699,13 @@ namespace rl
                 nextStep += normal * this->delta;
                 this->model->setPosition(nextStep);
                 this->model->updateFrames();
-                this->getAllCollidingShapes(allColls);
+                this->model->isColliding();
+                allColls = this->getAllCollidingShapes();
               }
-              while (allColls[slidingSurface]);
+              while (allColls.find(slidingPair) != allColls.end());
 
               // check if we are in free-space or if we have another collision
-              if (this->model->isColliding())
+              if (allColls.size() > 0)
               {
                 // there is still a collision, so the sliding ends here
                 break;
@@ -707,24 +732,29 @@ namespace rl
           return false;
         }
 
-        this->getAllCollidingShapes(allColls);
-        if (finalCollision == "")
+        std::pair<std::string,std::string> finalCollision = std::pair<std::string,std::string>("","");
+        this->model->isColliding();
+        allColls = this->getAllCollidingShapes();
+        bool first_particle = true;
+        if (first_particle)
         {
           // first particle, init final collision
           if (allColls.size() == 0)
           {
-            finalCollision = "lost_contact";
+            finalCollision.first = "";
           }
           else
           {
-            finalCollision = allColls.begin()->first;
+            finalCollision.first = allColls.begin()->first.first;
+            finalCollision.second = allColls.begin()->first.second;
           }
+          first_particle = false;
         }
         else
         {
           if (allColls.size() == 0)
           {
-            if (finalCollision != "lost_contact")
+            if (finalCollision.first != "")
             {
               // some particles lost contact, some didn't...
               return false;
@@ -732,7 +762,7 @@ namespace rl
           }
           else
           {
-            if (finalCollision != allColls.begin()->first)
+            if (finalCollision != slidingPair)
             {
               // different collision than the other particles -> different contact state
               return false;
@@ -741,7 +771,7 @@ namespace rl
         }
 
         // valid particle, store it
-        if(finalCollision == "lost_contact")
+        if(finalCollision.first=="")
         {
           Particle p(nextStep);
           particles.push_back(p);
@@ -750,7 +780,7 @@ namespace rl
         {
           std::vector<Contact> contacts;
           rl::math::Vector3 contactPoint, normal; //TODO!!!!!!
-          contacts.push_back(Contact(contactPoint,normal,slidingSurface,finalCollision)); //FIXME!!! im just a hack!
+          contacts.push_back(Contact(contactPoint,normal,finalCollision.first,finalCollision.second)); //FIXME!!! im just a hack!
           Particle p(nextStep, contacts);
           particles.push_back(p);
         }
@@ -843,23 +873,9 @@ namespace rl
       return evals[maxIdx] > 0.001;
     }
 
-    void PcRrt::getAllCollidingShapes(::std::map<::std::string, bool>& collidingShapes)
+    const rl::sg::solid::Scene::CollisionMap&  PcRrt::getAllCollidingShapes()
     {
-      collidingShapes.clear();
-      ::rl::sg::Body *sceneBody = this->solidScene->getModel(1)->getBody(0);
-      ::rl::sg::Shape *robotShape = this->solidScene->getModel(0)->getBody(2)->getShape(0);
-
-      ::std::string shape1, shape2;
-      for (size_t i = 0; i < sceneBody->getNumShapes(); ++i)
-      {
-
-        if (this->solidScene->areColliding(sceneBody->getShape(i), robotShape))
-        {
-          this->solidScene->lastCollidingShapes(shape1, shape2);
-          collidingShapes[shape1] = true;
-        }
-
-      }
+      return this->solidScene->getLastCollisions();
     }
 
     void PcRrt::drawParticles(const ::std::vector<Particle>& particles)

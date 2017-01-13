@@ -31,6 +31,7 @@
 #include <SOLID/SOLID_broad.h>
 
 #include <string>
+#include <map>
 
 #include "../DepthScene.h"
 #include "../DistanceScene.h"
@@ -54,7 +55,7 @@ namespace rl
 				
 				bool areColliding(::rl::sg::Shape* first, ::rl::sg::Shape* second);
 
-				void lastCollidingShapes(::std::string& first, ::std::string& second);
+        void lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& first_vec, ::rl::math::Vector3& second_vec);
 				
 				::rl::sg::Model* create();
 				
@@ -71,6 +72,14 @@ namespace rl
 				bool raycast(::rl::sg::Shape* shape, const ::rl::math::Vector3& source, const ::rl::math::Vector3& target, ::rl::math::Real& distance);
 				
 				void setMargin(const ::rl::math::Real& margin);
+
+        //key is pair of shapes, values are the 3d points with maximum penetration distance
+        typedef std::map<std::pair<std::string, std::string> , std::pair<rl::math::Vector3, rl::math::Vector3> > CollisionMap;
+
+        const CollisionMap& getLastCollisions(){return this->lastCollisions;}
+
+        void resetCollisionBuffer(){lastCollisions.clear();}
+
 				
 				BP_SceneHandle broad;
 				
@@ -85,6 +94,10 @@ namespace rl
 
 				::rl::sg::Shape* lastCollidingShape1;
 				::rl::sg::Shape* lastCollidingShape2;
+        ::rl::math::Vector3 lastCollisionVector1;
+        ::rl::math::Vector3 lastCollisionVector2;
+
+         CollisionMap lastCollisions;
 			};
 		}
 	}

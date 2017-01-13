@@ -66,7 +66,10 @@ namespace rl
 		bool
 		SimpleModel::isColliding()
 		{
+      dynamic_cast< ::rl::sg::SimpleScene* >(this->scene)->resetCollisionBuffer();
 			++this->totalQueries;
+
+      bool collision = false;
 			
 			for (::std::size_t i = 0; i < this->model->getNumBodies(); ++i)
 			{
@@ -81,7 +84,7 @@ namespace rl
 								if (dynamic_cast< ::rl::sg::SimpleScene* >(this->scene)->areColliding(this->model->getBody(i), *k))
 								{
 									this->body = i;
-									return true;
+                  collision = true;
 								}
 							}
 						}
@@ -95,12 +98,15 @@ namespace rl
 						if (dynamic_cast< ::rl::sg::SimpleScene* >(this->scene)->areColliding(this->model->getBody(i), this->model->getBody(j)))
 						{
 							this->body = i;
-							return true;
+              collision = true;
 						}
 					}
 				}
 			}
-			
+
+      if(collision)
+        return true;
+
 			this->body = this->getBodies();
 			++this->freeQueries;
 			return false;

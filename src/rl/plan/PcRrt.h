@@ -71,7 +71,7 @@ namespace rl
 
       bool projectOnSurface(const ::rl::math::Vector& point, const ::rl::math::Vector& pointOnSurface, const ::rl::math::Vector& normal, ::rl::math::Vector& out);
 
-      void getAllCollidingShapes(::std::map<::std::string, bool>& collidingShapes);
+      const rl::sg::solid::Scene::CollisionMap&  getAllCollidingShapes();
       void getPath(VectorList& path);
       bool getNormal(const Vertex& vertex, ::rl::math::Vector& normal);
       void drawParticles(const ::std::vector<Particle>& particles);

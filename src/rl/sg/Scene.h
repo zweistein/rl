@@ -32,6 +32,10 @@
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/VRMLnodes/SoVRMLGroup.h>
 
+#include "Exception.h"
+
+#include <rl/math/Vector.h>
+
 #include "Shape.h"
 
 namespace rl
@@ -69,8 +73,11 @@ namespace rl
 			
 			virtual void setName(const ::std::string& name);
 
-			virtual void lastCollidingShapes(::std::string& first, ::std::string& second);
+      virtual void lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& first_vec, ::rl::math::Vector3& second_vec);
 			
+
+      virtual void resetCollisionBuffer(){throw Exception("lresetCollisionBuffer()");}
+
 		protected:
 			bool isScalingSupported;
 			

@@ -73,7 +73,7 @@ namespace rl
 					DT_DestroyScene(this->scene);
 				}
 			}
-			
+
 			bool
 			Scene::areColliding(::rl::sg::Shape* first, ::rl::sg::Shape* second)
 			{
@@ -82,28 +82,52 @@ namespace rl
 				
 				if (shape1->encounters.count(shape2) > 0 || shape2->encounters.count(shape1) > 0)
 				{
-					DT_Vector3 point;
-					
-					// return (DT_TRUE == DT_GetCommonPoint(
-					// 	shape1->complex ? shape1->object : shape2->object,
-					// 	shape1->complex ? shape2->object : shape1->object,
-					// 	point
-					// )) ? true : false;
+          DT_Vector3 vector1;
+          DT_Vector3 vector2;
 
-					if (DT_TRUE == DT_GetCommonPoint(
-						shape1->complex ? shape1->object : shape2->object,
-						shape1->complex ? shape2->object : shape1->object,
-						point
-					))
-					{
-						this->lastCollidingShape1 = first;
-						this->lastCollidingShape2 = second;
-						return true;
-					}
-					else
-					{
-						return false;
-					}
+          if (DT_TRUE == DT_GetPenDepth(
+            shape1->complex ? shape1->object : shape2->object,
+            shape1->complex ? shape2->object : shape1->object,
+            shape1->complex ? vector1 : vector2,
+            shape1->complex ? vector2 : vector1
+          ))
+          {
+            this->lastCollidingShape1 = first;
+            this->lastCollidingShape2 = second;
+            for(int i=0; i<3; i++)
+            {
+              this->lastCollisionVector1(i)=vector1[i];
+              this->lastCollisionVector2(i)=vector2[i];
+            }
+
+            const void *addr1 = static_cast<const void*>(this->lastCollidingShape1);
+            ::std::stringstream ss1;
+            ss1 << addr1;
+
+            const void *addr2 = static_cast<const void*>(this->lastCollidingShape2);
+            ::std::stringstream ss2;
+            ss2 << addr2;
+            std::pair<std::string, std::string> collShapes(ss1.str(),ss2.str());
+            std::pair<::rl::math::Vector3,::rl::math::Vector3> collPoints(lastCollisionVector1,lastCollisionVector2);
+            lastCollisions[collShapes]=collPoints;
+
+            return true;
+          }
+          else
+          {
+            return false;
+          }
+//					if (DT_TRUE == DT_GetCommonPoint(
+//						shape1->complex ? shape1->object : shape2->object,
+//						shape1->complex ? shape2->object : shape1->object,
+//						point
+//					))
+//					{
+//						this->lastCollidingShape1 = first;
+//						this->lastCollidingShape2 = second;
+//						return true;
+//					}
+
 				}
 				else
 				{
@@ -112,7 +136,7 @@ namespace rl
 			}
 
 			void
-			Scene::lastCollidingShapes(::std::string& first, ::std::string& second)
+      Scene::lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& first_vec, ::rl::math::Vector3& second_vec)
 			{
 				const void *addr1 = static_cast<const void*>(this->lastCollidingShape1);
 				::std::stringstream ss1;
@@ -123,6 +147,9 @@ namespace rl
 				::std::stringstream ss2;
 				ss2 << addr2;
 				second = ss2.str();
+
+        first_vec = this->lastCollisionVector1;
+        second_vec = this->lastCollisionVector2;
 			}
 			
 			void
