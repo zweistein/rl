@@ -82,26 +82,26 @@ namespace rl
 				
 				if (shape1->encounters.count(shape2) > 0 || shape2->encounters.count(shape1) > 0)
 				{
-          DT_Vector3 vector1;
-          DT_Vector3 vector2;
+          DT_Vector3 point;
 
+          //CAUTION this seems to be failing sometimes...
 //          if (DT_TRUE == DT_GetPenDepth(
 //            shape1->complex ? shape1->object : shape2->object,
 //            shape1->complex ? shape2->object : shape1->object,
 //            shape1->complex ? vector1 : vector2,
 //            shape1->complex ? vector2 : vector1
 //          ))
-
-            if (DT_TRUE == DT_GetPenDepth(
-              shape1->object, shape2->object, vector1, vector2)
-            )
+          if (DT_TRUE == DT_GetCommonPoint(
+            shape1->complex ? shape1->object : shape2->object,
+            shape1->complex ? shape2->object : shape1->object,
+            point
+          ))
           {
             this->lastCollidingShape1 = first;
             this->lastCollidingShape2 = second;
             for(int i=0; i<3; i++)
             {
-              this->lastCollisionVector1(i)=vector1[i];
-              this->lastCollisionVector2(i)=vector2[i];
+              this->lastCollisionPoint(i)=point[i];
             }
 
             const void *addr1 = static_cast<const void*>(this->lastCollidingShape1);
@@ -112,8 +112,7 @@ namespace rl
             ::std::stringstream ss2;
             ss2 << addr2;
             std::pair<std::string, std::string> collShapes(ss1.str(),ss2.str());
-            std::pair<::rl::math::Vector3,::rl::math::Vector3> collPoints(lastCollisionVector1,lastCollisionVector2);
-            lastCollisions[collShapes]=collPoints;
+            lastCollisions[collShapes]=lastCollisionPoint;
 
             return true;
           }
@@ -140,7 +139,7 @@ namespace rl
 			}
 
 			void
-      Scene::lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& first_vec, ::rl::math::Vector3& second_vec)
+      Scene::lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& point)
 			{
 				const void *addr1 = static_cast<const void*>(this->lastCollidingShape1);
 				::std::stringstream ss1;
@@ -152,8 +151,7 @@ namespace rl
 				ss2 << addr2;
 				second = ss2.str();
 
-        first_vec = this->lastCollisionVector1;
-        second_vec = this->lastCollisionVector2;
+        point = this->lastCollisionPoint;
 			}
 			
       bool

@@ -55,7 +55,7 @@ namespace rl
 				
 				bool areColliding(::rl::sg::Shape* first, ::rl::sg::Shape* second);
 
-        void lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& first_vec, ::rl::math::Vector3& second_vec);
+        void lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& point);
 				
 				::rl::sg::Model* create();
 				
@@ -73,8 +73,8 @@ namespace rl
 				
 				void setMargin(const ::rl::math::Real& margin);
 
-        //key is pair of shapes, values are the 3d points with maximum penetration distance
-        typedef std::map<std::pair<std::string, std::string> , std::pair<rl::math::Vector3, rl::math::Vector3> > CollisionMap;
+        //key is pair of shapes, values is a point in the intersection of the shapes
+        typedef std::map<std::pair<std::string, std::string> , rl::math::Vector3 > CollisionMap;
 
         const CollisionMap& getLastCollisions(){return this->lastCollisions;}
 
@@ -96,8 +96,7 @@ namespace rl
 
 				::rl::sg::Shape* lastCollidingShape1;
 				::rl::sg::Shape* lastCollidingShape2;
-        ::rl::math::Vector3 lastCollisionVector1;
-        ::rl::math::Vector3 lastCollisionVector2;
+        ::rl::math::Vector3 lastCollisionPoint;
 
          CollisionMap lastCollisions;
 			};

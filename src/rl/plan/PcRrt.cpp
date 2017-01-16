@@ -466,13 +466,8 @@ namespace rl
           }
 
           // valid particle, store it
-          rl::math::Vector3 pa = collMap.begin()->second.first;
-          rl::math::Vector3 pb = collMap.begin()->second.second;
-
           std::vector<Contact> contacts;
-          rl::math::Vector3 contactPoint = 0.5*(pa+pb);
-          //this->drawSurfaceNormal(contactPoint, normal,1.0);
-          //rl::math::Vector3 normal = pb-pa;
+          rl::math::Vector3 contactPoint = collMap.begin()->second;
           contacts.push_back(Contact(contactPoint,normal,s1,s2));
           Particle p(nextStep, contacts);
           particles.push_back(p);
@@ -578,16 +573,13 @@ namespace rl
           }
           else if (s1 != shape1 || s2 != shape2)
           {
-            // not every collision is between the same two shapes, -> not one contact state
+            // not every collision is between the same two shapes -> not one contact state
             return false;
           }
 
           // valid particle, store it
-          rl::math::Vector3 pa = collMap.begin()->second.first;
-          rl::math::Vector3 pb = collMap.begin()->second.second;
-
           std::vector<Contact> contacts;
-          rl::math::Vector3 contactPoint = pb;
+          rl::math::Vector3 contactPoint = collMap.begin()->second;
           contacts.push_back(Contact(contactPoint,normal,s1,s2));
           Particle p(nextStep, contacts);
           particles.push_back(p);
@@ -628,6 +620,7 @@ namespace rl
       particles.clear();
       ::rl::math::Vector goal;
       std::vector<Contact> oldContacts = this->tree[0][nearest.first].gState->getParticles().begin()->contacts;
+
       ::rl::math::Vector pVec;
       ::rl::math::Vector3 pVec3;
       ::rl::math::Vector3 normal3;
