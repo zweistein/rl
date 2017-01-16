@@ -89,7 +89,7 @@ namespace rl
         bool sampleResult = false;
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
         {
-          sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles);
+          //sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles);
         }
         else if (doGuardedMove)
         {
@@ -422,12 +422,22 @@ namespace rl
         }
         while (!collision && !reached);
 
-        if (reached && !collision)
+        if (steps > 1 && reached && !collision)
         {
           Particle p(nextStep);
           particles.push_back(p);
           pIdx++;
-          shape1 = "no collision";
+          if (shape1 == "")
+          {
+            // first sample, init contact state shapes
+            shape1 = "no_collision";
+            shape2 = "no_collision";
+          }
+          else if (shape1 != "no_collision" || shape2 != "no_collision")
+          {
+            return false;
+          }
+
         }
         else if (steps > 1 && collision)
         {
@@ -448,7 +458,7 @@ namespace rl
 
           if (shape1 == "")
           {
-            // first collision, init contact state shapes
+            // first sample, init contact state shapes
             shape1 = s1;
             shape2 = s2;
           }
