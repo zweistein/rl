@@ -36,25 +36,22 @@ namespace rl
     }
 
     //Needed for Guarded moves
-    //    void PcRrt::sampleDirection(::rl::math::Vector& rd)
-    //    {
-    //        boost::random::uniform_real_distribution<> distr(0, 1);
-    //        int dim = rd.rows();
-    //        ::rl::math::Vector rd(dim);
-    //        double rdsum = 0;
-    //        for(int i=0; i<dim; i++)
-    //        {
-    //            rd[dim] = distr(*this->gen);
-    //            rsdum+=rd[dim]*rd[dim];
-    //        }
-    //        rdsum = sqrt(rdsum);
-    //        for(int i=0; i<dim; i++)
-    //        {
-    //            rd[dim] /= rdsum;
-    //        }
-
-    //        return rd;
-    //    }
+        void PcRrt::sampleDirection(::rl::math::Vector& rd)
+        {
+            boost::random::normal_distribution<> distr(0, 1);
+            int dim = rd.rows();
+            double rdsum = 0;
+            for(int i=0; i<dim; i++)
+            {
+                rd[i] = distr(*this->gen);
+                rdsum+=rd[i]*rd[i];
+            }
+            rdsum = sqrt(rdsum);
+            for(int i=0; i<dim; i++)
+            {
+                rd[i] /= rdsum;
+            }
+        }
 
 
     bool PcRrt::solve()
@@ -508,6 +505,11 @@ namespace rl
       this->model->updateFrames();
       ::rl::math::Vector3 initPoint = this->model->forwardPosition().translation();
 
+#ifdef RANDOM_DIRECTION
+      ::rl::math::Vector dir(this->model->getDof());
+      sampleDirection(dir);
+#endif
+
       while (pIdx < nrParticles)
       {
         // sample a starting point from the gaussian
@@ -521,7 +523,13 @@ namespace rl
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->configMean();
 
         ::rl::math::Vector initialError = init - mean;
+
+#ifdef RANDOM_DIRECTION
+        ::rl::math::Vector target = init + dir + initialError;
+#else
         ::rl::math::Vector target = chosen + initialError;
+
+#endif
 
         ::rl::math::Vector nextStep = init;
 
