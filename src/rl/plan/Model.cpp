@@ -537,5 +537,19 @@ namespace rl
 				this->mdl->calculateJacobianInverse(lambda, doSvd);
 			}
 		}
+
+    void Model::updateTool(const  ::rl::math::Transform& newToolDelta, const ::std::size_t& i)
+    {
+      if (NULL != this->kin)
+      {
+        this->kin->updateTool(newToolDelta, i);
+      }
+      else
+      {
+        std::cout<<"NOT IMPLEMENTED FOR MDL!!!"<<std::endl;
+        assert(0);
+      }
+    }
+
 	}
 }

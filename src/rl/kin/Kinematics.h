@@ -275,6 +275,8 @@ namespace rl
 			::rl::math::Transform& tool(const ::std::size_t& i = 0);
 			
 			const ::rl::math::Transform& tool(const ::std::size_t& i = 0) const;
+
+      void updateTool(const  ::rl::math::Transform& newToolDelta, const ::std::size_t& i=0);
 			
 			virtual ::rl::math::Real transformedDistance(const ::rl::math::Real& d) const;
 			

@@ -120,6 +120,9 @@ namespace rl
 			virtual void updateJacobian();
 			
 			virtual void updateJacobianInverse(const ::rl::math::Real& lambda = 0.0f, const bool& doSvd = true);
+
+
+      void updateTool(const  ::rl::math::Transform& newToolDelta, const ::std::size_t& i=0);
 			
 			::rl::kin::Kinematics* kin;
 			

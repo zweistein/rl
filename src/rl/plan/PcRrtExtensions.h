@@ -78,6 +78,8 @@ namespace rl
     class Contact
     {
     public:
+      Contact(){}
+
       Contact(::rl::math::Vector3& p, ::rl::math::Vector3& n, std::string& s_robot, std::string& s_env) :
         point(p),
         normal_env(n),
@@ -173,6 +175,7 @@ namespace rl
           ::rl::math::Real std_dev = sqrt(this->configDistr.covariance(i,i));
           configSampleDistributions.push_back(boost::random::normal_distribution<>(mean, std_dev));
         }
+
       }
 
       ::std::vector<Particle> particles;

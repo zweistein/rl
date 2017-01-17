@@ -848,6 +848,14 @@ namespace rl
 			
 			return this->tree[this->tools[i]]->transform;
 		}
+
+    void
+    Kinematics::updateTool(const  ::rl::math::Transform& newToolDelta, const ::std::size_t& i)
+    {
+
+      this->tree[this->tools[i]]->transform = this->tree[this->tools[i]]->transform*newToolDelta;
+    }
+
 		
 		::rl::math::Real
 		Kinematics::transformedDistance(const ::rl::math::Real& d) const
