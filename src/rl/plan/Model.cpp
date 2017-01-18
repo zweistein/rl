@@ -24,7 +24,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+
 #include <rl/sg/Body.h>
+
+#include <iostream>
 
 #include "Model.h"
 

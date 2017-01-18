@@ -133,6 +133,14 @@ namespace rl
         }
       }
 
+      void sampleConfigurationFromParticle(::rl::math::Vector& q)
+      {
+        assert(q.size() == this->dims);
+        boost::random::uniform_int_distribution<> particleDistr(0, particles.size()-1);
+        q = this->particles[particleDistr(this->gen)].config;
+      }
+
+
       Gaussian configGaussian()
       {
         return this->configDistr;

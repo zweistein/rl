@@ -131,17 +131,18 @@ namespace rl
             ::std::vector<Particle> goalParticles;
             if (this->sampleGoalParticles(nearest, *this->goal, this->nrParticles, goalParticles))
             {
-              GaussianState goalState(goalParticles);
-              ::rl::math::Real error = goalState.configGaussian().eigenvalues().maxCoeff();
+              ::boost::shared_ptr<GaussianState> goalState = ::boost::make_shared<GaussianState>(goalParticles);
+              ::rl::math::Real error = goalState->configGaussian().eigenvalues().maxCoeff();
               std::cout << "reached goal with error: " << error << " (max allowed: " << this->goalEpsilon << ")" << std::endl;
               if (error < this->goalEpsilon)
               {
                 // visualize goal connect step
                 this->drawParticles(goalParticles);
-                Gaussian g = goalState.configGaussian();
+                Gaussian g = goalState->configGaussian();
                 this->drawEigenvectors(g, 1.0);
                 // add goal connect step to tree
                 Vertex connected = this->addVertex(this->tree[0], possibleGoal.q);
+                this->tree[0][connected].gState = goalState;
                 this->addEdge(possibleGoal.neighbor.first, connected, this->tree[0]);
                 this->end[0] = connected;
                 return true;
@@ -220,12 +221,16 @@ namespace rl
       Vertex i = this->end[0];
 
       while (i != this->begin[0])
-      {
-        path.push_front(*this->tree[0][i].q);
+      {      
+        ::boost::shared_ptr<GaussianState> gs = this->tree[0][i].gState;
+        Particle p = *(gs->getParticles().begin());
+        path.push_front(p.config);
         i = ::boost::source(*::boost::in_edges(i, this->tree[0]).first, this->tree[0]);
       }
 
-      path.push_front(*this->tree[0][i].q);
+      ::boost::shared_ptr<GaussianState> gs = this->tree[0][i].gState;
+      Particle p = *(gs->getParticles().begin());
+      path.push_front(p.config);
 
       if (this->useMotionError)
       {
@@ -362,6 +367,26 @@ namespace rl
       }
     }
 
+    bool PcRrt::isEqualCollisionState(::rl::sg::solid::Scene::CollisionMap& first, ::rl::sg::solid::Scene::CollisionMap& second)
+    {
+      if (first.size() != second.size())
+      {
+        return false;
+      }
+      else
+      {
+        for(::rl::sg::solid::Scene::CollisionMap::iterator it = first.begin(); it != first.end(); it++)
+        {
+          if(second.find(it->first) == second.end())
+          {
+            return false;
+          }
+        }
+
+        return true;
+      }
+    }
+
     /**
       Samples a set of particles for a move through free-space to a target configuration (chosen)
     */
@@ -384,7 +409,8 @@ namespace rl
       {
         // sample a starting point from the gaussian
         ::rl::math::Vector init(this->model->getDof());
-        this->tree[0][nearest.first].gState->sampleConfiguration(init);
+
+        this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init);
 
         ::rl::math::Vector nextStep = init;
 
@@ -400,8 +426,12 @@ namespace rl
         int steps = 0;
         bool reached = false;
         bool collision = false;
+        bool inInitialCollision = true;
         ::rl::math::Real step = this->delta;
         ::rl::math::Real distance = this->model->distance(init, target);
+
+        rl::sg::solid::Scene::CollisionMap allColls, initColls;
+
         do
         {
           if (step >= distance)
@@ -417,10 +447,26 @@ namespace rl
 
           collision = this->model->isColliding();
 
+          if(steps == 0)
+          {
+            initColls = this->getAllCollidingShapes();
+            if(initColls.size() == 0)
+              inInitialCollision = false;
+          }
+
+          if(inInitialCollision)
+          {
+            allColls = this->getAllCollidingShapes();
+            inInitialCollision = isEqualCollisionState(initColls, allColls);
+          }
+
+          if(inInitialCollision && steps > 3)
+            return false;
+
           step += delta;
           steps++;
         }
-        while (!collision && !reached);
+        while (inInitialCollision || (!collision && !reached));
 
         if (steps > 1 && reached && !collision)
         {
@@ -510,9 +556,8 @@ namespace rl
 
       while (pIdx < nrParticles)
       {
-        // sample a starting point from the gaussian
-        ::rl::math::Vector init(this->model->getDof());
-        this->tree[0][nearest.first].gState->sampleConfiguration(init);
+        rl::math::Vector init(this->model->getDof());
+        this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init);
 
         // sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
@@ -534,6 +579,10 @@ namespace rl
         // move until collision
         int steps = 0;
         bool collision = false;
+        bool inInitialCollision = true;
+
+        ::rl::sg::solid::Scene::CollisionMap allColls, initColls;
+
         ::rl::math::Real step = delta;
         ::rl::math::Real distance = this->model->distance(init, target);
         do
@@ -545,10 +594,26 @@ namespace rl
 
           collision = this->model->isColliding();
 
+          if(steps == 0)
+          {
+            initColls = this->getAllCollidingShapes();
+            if(initColls.size() == 0)
+              inInitialCollision = false;
+          }
+
+          if(inInitialCollision)
+          {
+            allColls = this->getAllCollidingShapes();
+            inInitialCollision = isEqualCollisionState(initColls, allColls);
+          }
+
+          if(inInitialCollision && steps > 3)
+            return false;
+
           step += delta;
           steps++;
         }
-        while (!collision);
+        while (!collision || inInitialCollision);
 
         if (steps > 1)
         {
@@ -607,7 +672,7 @@ namespace rl
       return dist;
     }
 
-    double PcRrt::moveConfigOnSurface(const ::rl::math::Vector& config, const ::rl::math::Vector3& pointOnSurface, const ::rl::math::Vector3& normal, ::rl::math::Vector& out)
+    bool PcRrt::moveConfigOnSurface(const ::rl::math::Vector& config, const ::rl::math::Vector3& pointOnSurface, const ::rl::math::Vector3& normal, ::rl::math::Vector& out)
     {
       double dist = std::numeric_limits<double>::infinity();
       out = config;
@@ -622,9 +687,9 @@ namespace rl
       ::rl::math::Vector3 goaltransl;
       dist = projectOnSurface(eeT.translation(),pointOnSurface, normal, goaltransl);
 
-      while(dist > 0.01)
+      int steps = 0;
+      while(dist > 0.01 && steps++<3)
       {
-
         goalT.translation() = goaltransl;
 
         rl::math::Vector6 tdot;
@@ -632,6 +697,13 @@ namespace rl
 
         rl::math::Vector qdot;
         this->model->inverseVelocity(tdot, qdot);
+
+        if(qdot.norm() > this->delta)
+        {
+          qdot.normalize();
+          qdot*=this->delta;
+        }
+
         out += qdot;
         this->model->setPosition(out);
         this->model->updateFrames();
@@ -643,7 +715,10 @@ namespace rl
       }
 
       //Move a bit into the surface until we are colliding
-      while(!this->model->isColliding())
+      steps = 0;
+
+      bool collision = this->model->isColliding();
+      while(!collision && steps++<10)
       {
         rl::math::Vector6 tdot;
         tdot.setZero();
@@ -658,8 +733,10 @@ namespace rl
         this->model->updateFrames();
         this->model->updateJacobian();
         this->model->updateJacobianInverse();
+        collision = this->model->isColliding();
       }
-      return dist;
+
+      return collision && dist < 0.01  ;
     }
 
 
@@ -737,10 +814,8 @@ namespace rl
         return false;
       }
 
-      std::pair<std::string, std::string> slidingPair;
       particles.clear();
       Particle oldParticle = *(this->tree[0][nearest.first].gState->getParticles().begin());
-
 
       //Sample a sliding surface
       int slidingIdx = 0;
@@ -752,6 +827,7 @@ namespace rl
 
 
       Contact slidingContact = oldParticle.contacts[slidingIdx];
+      std::pair<std::string, std::string> slidingPair;
       slidingPair.first  = slidingContact.shape_robot;
       slidingPair.second = slidingContact.shape_env;
 
@@ -768,6 +844,7 @@ namespace rl
       this->model->updateJacobian();
 
       ::rl::math::Vector3 slidingNormal = slidingContact.normal_env;
+      this->drawSurfaceNormal(slidingContact.point,slidingContact.normal_env);
 
       this->model->setPosition(chosen);
       this->model->updateFrames();
@@ -787,18 +864,15 @@ namespace rl
 
       rl::sg::solid::Scene::CollisionMap allColls, finalCollisions;
 
+      //Our sliding direction - same for all particles
+      ::rl::math::Vector6 tdot;
+
       int pIdx = 0;
       while (pIdx < nrParticles)
       {
         // sample a starting point
-        ::rl::math::Vector init(this->model->getDof()), tmp(this->model->getDof());
-        this->tree[0][nearest.first].gState->sampleConfiguration(tmp);
-
-        if(moveConfigOnSurface(tmp, slidingContact.point, slidingContact.normal_env, init)>0.02)
-        {
-          std::cout<<"Could not project start cfg on surface!!";
-          return false;
-        }
+        ::rl::math::Vector init(this->model->getDof());
+        this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init);
 
         this->model->setPosition(init);
         this->model->updateFrames();
@@ -807,11 +881,12 @@ namespace rl
           std::cout<<"no contact after projection";
         }
 
-        ::rl::math::Transform fp = this->model->forwardPosition();
-        ::rl::math::Vector6 tdot;
-        ::rl::math::transform::toDelta(fp, goal, tdot);
-
-
+        if(pIdx == 0)
+        {
+          ::rl::math::Transform fp = this->model->forwardPosition();
+          ::rl::math::transform::toDelta(fp, goal, tdot);
+          tdot.normalize();
+        }
 
         //Sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
@@ -819,8 +894,6 @@ namespace rl
 
 
         int steps = 0;
-        double step = delta;
-
         ::rl::math::Vector nextStep = init;
 
         while (true)
@@ -841,15 +914,15 @@ namespace rl
           ::rl::math::Vector newStep(this->model->getDof());
           this->model->interpolateNoisy(nextStep,nextStep+qdot,1,motionNoise,newStep);
 
-          if(moveConfigOnSurface(newStep, slidingContact.point, slidingContact.normal_env, nextStep)>0.02)
+          if(!moveConfigOnSurface(newStep, slidingContact.point, slidingContact.normal_env, nextStep))
           {
-            std::cout<<"Could not project cfg on surface!!";
+            std::cout<<"Could not project cfg on surface!!"<<std::endl;
+            this->model->updateTool(cp_neg);
             return false;
           }
 
-          this->viewer->drawConfiguration(nextStep);
+          //this->viewer->drawConfiguration(nextStep);
 
-          step += delta;
           steps++;
 
           this->model->isColliding();
@@ -876,15 +949,12 @@ namespace rl
         if (steps < 3)
         {
           // we did not move very far, this is considered failure
+          this->model->updateTool(cp_neg);
           return false;
         }
 
         this->model->isColliding();
         allColls = this->getAllCollidingShapes();
-
-        rl::math::Vector3 normal;
-        if(!this->solidScene->getCollisionSurfaceNormal(slidingContact.point+slidingNormal,normal))
-          return false;
 
         if (pIdx == 0)
         {
@@ -892,17 +962,11 @@ namespace rl
         }
         else
         {
-          if (allColls.size() != finalCollisions.size())
+          if(!this->isEqualCollisionState(allColls, finalCollisions))
           {
-              return false;         
-          }
-          else
-          {
-            for(::rl::sg::solid::Scene::CollisionMap::iterator it = allColls.begin(); it != allColls.end(); it++)
-            {
-              if(finalCollisions.find(it->first) == finalCollisions.end())
-                return false;
-            }
+            //inconsistent (over particles) collision state at end of slide
+            this->model->updateTool(cp_neg);
+            return false;
           }
         }
 
@@ -918,8 +982,19 @@ namespace rl
           for(::rl::sg::solid::Scene::CollisionMap::iterator it = allColls.begin(); it != allColls.end(); it++)
           {
             std::string c1 = it->first.first;
-                        std::string c2 = it->first.second;
-            contacts.push_back(Contact(it->second,normal,c1,c2));
+            std::string c2 = it->first.second;
+
+            ::rl::math::Vector3 contactNormal;
+            if(c1==slidingPair.first && c2==slidingPair.second)
+            {
+              contactNormal = slidingNormal;
+            }
+            else
+            {
+              this->solidScene->getCollisionSurfaceNormal(slidingContact.point+slidingNormal*0.1,contactNormal);
+            }
+
+            contacts.push_back(Contact(it->second,contactNormal,c1,c2));
           }
           Particle p(nextStep, contacts);
           particles.push_back(p);
@@ -927,59 +1002,53 @@ namespace rl
         pIdx++;
       }
 
+      this->model->updateTool(cp_neg);
       return true;
     }
 
     bool PcRrt::sampleGoalParticles(const Neighbor& nearest, ::rl::math::Vector& goal, int nrParticles, ::std::vector<Particle>& particles)
     {
-      double posError = 0.01;
-      boost::random::normal_distribution<> distr(0, posError);
       particles.clear();
       int pIdx = 0;
 
       while (pIdx < nrParticles)
       {
-        ::rl::math::Vector  nextStep(this->model->getDof());
+        // sample a starting point from the gaussian
+        ::rl::math::Vector init(this->model->getDof());
+        this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init);
 
-        // sample initial position
-        this->tree[0][nearest.first].gState->sampleConfiguration(nextStep);
+        ::rl::math::Vector nextStep = init;
 
-        // sample independent noise
+        // sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
+        this->model->sampleMotionError(motionNoise);
+
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->configMean();
-        ::rl::math::Vector delta = goal - mean;
 
-        for (int i = 0; i < this->model->getDof(); ++i)
-        {
-          motionNoise[i] = distr(*this->gen) * delta[i];
-        }
-
-
-        ::rl::math::Vector error = nextStep - mean;
-        ::rl::math::Vector target = goal + error + motionNoise;
+        ::rl::math::Vector initialError = init - mean;
+        ::rl::math::Vector target = goal + initialError;
 
         int steps = 0;
         bool reached = false;
         bool collision = false;
+        ::rl::math::Real step = this->delta;
+        ::rl::math::Real distance = this->model->distance(init, target);
         do
         {
-          ::rl::math::Real distance = this->model->distance(nextStep, target);
-          ::rl::math::Real step = distance;
-
-          if (step <= this->delta)
+          if (step >= distance)
           {
             reached = true;
+            step = distance;
           }
-          else
-          {
-            step = this->delta;
-          }
-          this->model->interpolate(nextStep, target,  step / distance, nextStep);
+
+          this->model->interpolateNoisy(init, target,  step / distance, motionNoise, nextStep);
 
           this->model->setPosition(nextStep);
           this->model->updateFrames();
 
           collision = this->model->isColliding();
+
+          step += delta;
           steps++;
         }
         while (!collision && !reached);
@@ -1036,11 +1105,12 @@ namespace rl
 
     void PcRrt::drawEigenvectors(Gaussian& gaussian, ::rl::math::Real scale)
     {
-      ::rl::math::Vector3 start, end1, end2;
+      ::rl::math::Vector3 start, end1, end2, end3;
       ::rl::math::Matrix vectors = gaussian.eigenvectors();
       ::rl::math::Vector values = gaussian.eigenvalues();
       ::rl::math::Vector eigen1 = vectors.col(0) * sqrt(values(0)) * scale;
       ::rl::math::Vector eigen2 = vectors.col(1) * sqrt(values(1)) * scale;
+
 
       this->model->setPosition(gaussian.mean);
       this->model->updateFrames();
@@ -1049,22 +1119,37 @@ namespace rl
       start(1) = t1.translation().y();
       start(2) = t1.translation().z();
 
-      this->model->setPosition(gaussian.mean + eigen1);
-      this->model->updateFrames();
-      const ::rl::math::Transform& t2 = this->model->forwardPosition();
-      end1(0) = t2.translation().x();
-      end1(1) = t2.translation().y();
-      end1(2) = t2.translation().z();
 
-      this->model->setPosition(gaussian.mean + eigen2);
-      this->model->updateFrames();
-      const ::rl::math::Transform& t3 = this->model->forwardPosition();
-      end2(0) = t3.translation().x();
-      end2(1) = t3.translation().y();
-      end2(2) = t3.translation().z();
+
+      if(this->model->getDof()==2)
+      {
+        this->model->setPosition(gaussian.mean+eigen1);
+        this->model->updateFrames();
+        const ::rl::math::Transform& t2 = this->model->forwardPosition();
+        end1(0) = t2.translation().x();
+        end1(1) = t2.translation().y();
+        end1(2) = t2.translation().z();
+
+        this->model->setPosition(gaussian.mean+eigen2);
+        this->model->updateFrames();
+        const ::rl::math::Transform& t3 = this->model->forwardPosition();
+        end2(0) = t3.translation().x();
+        end2(1) = t3.translation().y();
+        end2(2) = t3.translation().z();
+      }
+
+      if(this->model->getDof()==3)
+      {
+        ::rl::math::Vector eigen3 = vectors.col(2) * sqrt(values(2)) * scale;
+        end1 = start+eigen1;
+        end2 = start+eigen2;
+        end3 = start+eigen3;
+        this->viewer->drawLine(start, end3);
+      }
 
       this->viewer->drawLine(start, end1);
       this->viewer->drawLine(start, end2);
+
     }
 
     void PcRrt::drawSurfaceNormal(::rl::math::Vector3& startPoint, ::rl::math::Vector3& normal, ::rl::math::Real scale)
