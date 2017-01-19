@@ -81,6 +81,9 @@ namespace rl
       virtual VectorPtr tryConnect(Tree& tree, const Neighbor& nearest, const ::rl::math::Vector& chosen);
       //void kMeans(const ::rl::math::Matrix& data, const int k, ::std::vector<::std::vector<::rl::math::Vector> >& clusters);
 
+
+      PcRrt::Neighbor nearest(const Tree& tree, const ::rl::math::Vector& chosen);
+
       typedef ::std::vector<Particle> ParticleSet;
 
 

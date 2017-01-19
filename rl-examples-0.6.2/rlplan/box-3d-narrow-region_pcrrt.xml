@@ -89,7 +89,7 @@
       <wait/>
     </viewer>
     <delta>0.01</delta>
-    <nrParticles>50</nrParticles>
+    <nrParticles>10</nrParticles>
     <motionError>
       <q>0.05</q>
       <q>0.05</q>

@@ -199,7 +199,7 @@ namespace rl
           normalVector[2] = static_cast< ::rl::math::Real >(normal[2]);
         }
 
-        return DT_TRUE == success;
+        return DT_TRUE == success && normalVector.norm() > 0.1;
       }
 
 

@@ -32,27 +32,86 @@ namespace rl
     {
       // comment in for random seed
       // this->gen = ::boost::make_shared<boost::random::mt19937>(std::time(0));
-      this->gen = ::boost::make_shared<boost::random::mt19937>(42);
+      this->gen = ::boost::make_shared<boost::random::mt19937>(44);
     }
 
     //Needed for Guarded moves
-        void PcRrt::sampleDirection(::rl::math::Vector& rd)
+      void PcRrt::sampleDirection(::rl::math::Vector& rd)
+      {
+          boost::random::normal_distribution<> distr(0, 1);
+          int dim = rd.rows();
+          double rdsum = 0;
+          for(int i=0; i<dim; i++)
+          {
+              rd[i] = distr(*this->gen);
+              rdsum+=rd[i]*rd[i];
+          }
+          rdsum = sqrt(rdsum);
+          for(int i=0; i<dim; i++)
+          {
+              rd[i] /= rdsum;
+          }
+      }
+
+      PcRrt::Neighbor PcRrt::nearest(const Tree& tree, const ::rl::math::Vector& chosen)
+      {
+        struct NeighborCompare
         {
-            boost::random::normal_distribution<> distr(0, 1);
-            int dim = rd.rows();
-            double rdsum = 0;
-            for(int i=0; i<dim; i++)
-            {
-                rd[i] = distr(*this->gen);
-                rdsum+=rd[i]*rd[i];
-            }
-            rdsum = sqrt(rdsum);
-            for(int i=0; i<dim; i++)
-            {
-                rd[i] /= rdsum;
-            }
+          bool operator()(const Neighbor& lhs, const Neighbor& rhs) const
+          {
+            return lhs.second < rhs.second;
+          }
+        };
+
+        std::set<Neighbor, NeighborCompare> neighbors;
+
+        for (VertexIteratorPair i = ::boost::vertices(tree); i.first != i.second; ++i.first)
+        {
+          ::rl::math::Real d = this->model->transformedDistance(chosen, *tree[*i.first].q);
+          neighbors.insert(Neighbor(*i.first, d));
         }
 
+        Neighbor bestNeighbor(nullptr, ::std::numeric_limits<::rl::math::Real>::max());
+
+        int tested = 0;
+        for (auto n = neighbors.begin(); n != neighbors.end() && tested < 5; ++n)
+        {
+          const auto& vertex = (*n).first;
+          const auto& mean = tree[vertex].gState->configMean();
+          const auto& particles = tree[vertex].gState->getParticles();
+          const ::rl::math::Real distance = this->model->distance(mean, chosen);
+
+          std::vector<Particle> movedParticles;
+          for (int pIdx = 0; pIdx < particles.size(); ++pIdx)
+          {
+            ::rl::math::Vector motionNoise(this->model->getDof());
+            this->model->sampleMotionError(motionNoise);
+
+            auto particle = particles[pIdx];
+            auto particleOffset = particle.config - mean;
+            auto shiftedChosen = chosen + particleOffset;
+
+            ::rl::math::Vector dest(this->model->getDof());
+            this->model->interpolateNoisy(particle.config, shiftedChosen, distance, motionNoise, dest);
+
+            Particle p(dest);
+            movedParticles.push_back(dest);
+          }
+
+          GaussianState g(movedParticles);
+          ::rl::math::Real metric = g.configGaussian().eigenvalues().sum();
+          if (metric < bestNeighbor.second)
+          {
+            bestNeighbor.first = vertex;
+            bestNeighbor.second = metric;
+          }
+
+          tested++;
+        }
+
+
+        return bestNeighbor;
+    }
 
     bool PcRrt::solve()
     {
@@ -108,11 +167,11 @@ namespace rl
           this->drawEigenvectors(g, 1.0);
 
           // add a new vertex and edge
-          VectorPtr mean = ::boost::make_shared<::rl::math::Vector>(gaussianState->configMean());
+          VectorPtr mean = ::boost::make_shared<::rl::math::Vector>(g.mean);
           Vertex newVertex = this->addVertex(this->tree[0], mean);
-          this->model->setPosition(*mean);
-          ::boost::shared_ptr<::rl::math::Transform> tptr = ::boost::make_shared<::rl::math::Transform>(this->model->forwardPosition());
-          this->tree[0][newVertex].t = tptr;
+          //this->model->setPosition(*mean);
+          //::boost::shared_ptr<::rl::math::Transform> tptr = ::boost::make_shared<::rl::math::Transform>(this->model->forwardPosition());
+          //this->tree[0][newVertex].t = tptr;
           this->tree[0][newVertex].gState = gaussianState;
 
           this->addEdge(chosenVertex, newVertex, this->tree[0]);
@@ -811,17 +870,17 @@ namespace rl
       this->model->setPosition(chosen);
       this->model->updateFrames();
       //The pose of a random sample
-      ::rl::math::Vector3 chosenForwardPos = this->model->forwardPosition().translation();
+      //::rl::math::Vector3 chosenForwardPos = this->model->forwardPosition().translation();
+      ::rl::math::Vector randomDir(3);
+      this->sampleDirection(randomDir);
 
       //Project it on the sliding surface
       ::rl::math::Vector3 chosen_proj;
-      double distToSurface = projectOnSurface(chosenForwardPos, slidingContact.point, slidingNormal, chosen_proj);
+      double distToSurface = projectOnSurface(slidingContact.point+randomDir, slidingContact.point, slidingNormal, chosen_proj);
 
 
       //This is the target direction of our slide
-      ::rl::math::Transform goal = *(this->tree[0][nearest.first].t);
-      goal.translation() = chosen_proj;
-      //goal.rotation() = //leave constant for now!
+      ::rl::math::Transform goal;
 
 
       rl::sg::solid::Scene::CollisionMap allColls, finalCollisions;
@@ -846,6 +905,8 @@ namespace rl
         if(pIdx == 0)
         {
           ::rl::math::Transform fp = this->model->forwardPosition();
+          goal = fp;
+          goal.translation() = chosen_proj;
           ::rl::math::transform::toDelta(fp, goal, tdot);
           tdot.normalize();
         }
@@ -883,7 +944,7 @@ namespace rl
             return false;
           }
 
-          //this->viewer->drawConfiguration(nextStep);
+          this->viewer->drawConfiguration(nextStep);
 
           steps++;
 
@@ -953,7 +1014,12 @@ namespace rl
             }
             else
             {
-              this->solidScene->getCollisionSurfaceNormal(it->second+slidingNormal*this->delta,contactNormal);
+              if(!this->solidScene->getCollisionSurfaceNormal(it->second+slidingNormal*3.0*this->delta,contactNormal))
+              {
+                this->model->updateTool(cp_neg);
+                std::cout<<"failed to compute normal"<<std::endl;
+                return false;
+              }
             }
 
             contacts.push_back(Contact(it->second,contactNormal,c1,c2));
@@ -993,15 +1059,28 @@ namespace rl
     {
       for (int i = 0; i < particles.size(); ++i)
       {
-        this->model->setPosition(particles[i].config);
-        this->model->updateFrames();
-        const ::rl::math::Transform& t = this->model->forwardPosition();
         ::rl::math::Vector3 opPos;
-        opPos[0] = t.translation().x();
-        opPos[1] = t.translation().y();
-        opPos[2] = t.translation().z();
 
-        this->viewer->drawSphere(opPos, 0.02);
+        if(particles[i].contacts.size() > 0)
+        {
+          for (int j = 0; j < particles[i].contacts.size(); ++j)
+          {
+            opPos = particles[i].contacts[j].point;
+            this->viewer->drawSphere(opPos, 0.02);
+          }
+        }
+        else
+        {
+          this->model->setPosition(particles[i].config);
+          this->model->updateFrames();
+          const ::rl::math::Transform& t = this->model->forwardPosition();
+
+          opPos[0] = t.translation().x();
+          opPos[1] = t.translation().y();
+          opPos[2] = t.translation().z();
+          this->viewer->drawSphere(opPos, 0.02);
+        }
+
       }
     }
 
