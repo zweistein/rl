@@ -28,6 +28,7 @@
 
 #include "RrtExtExt.h"
 #include "NoisyModel.h"
+#include "NoisyModel2D.h"
 
 namespace rl
 {

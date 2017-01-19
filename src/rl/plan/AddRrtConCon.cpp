@@ -28,6 +28,7 @@
 
 #include "AddRrtConCon.h"
 #include "NoisyModel.h"
+#include "NoisyModel2D.h"
 
 namespace rl
 {

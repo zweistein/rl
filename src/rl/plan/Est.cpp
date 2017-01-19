@@ -32,6 +32,7 @@
 
 #include "Est.h"
 #include "NoisyModel.h"
+#include "NoisyModel2D.h"
 
 #include <iostream>
 #include <math.h>

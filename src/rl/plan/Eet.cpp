@@ -12,6 +12,7 @@
 #include <rl/util/Timer.h>
 
 #include "NoisyModel.h"
+#include "NoisyModel2D.h"
 #include "Eet.h"
 #include "Exception.h"
 #include "Sampler.h"

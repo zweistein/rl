@@ -3,8 +3,8 @@
   <pcRrt>
     <duration>600</duration>
     <goal>
-      <q>1.7</q>
-      <q>-1.1</q>
+      <q>0.1</q>
+      <q>0.0</q>
     </goal>
     <model>
       <kinematics href="../rlkin/box-2d-050505.xml">
@@ -22,7 +22,7 @@
         </world>
       </kinematics>
       <model>0</model>
-      <scene href="../rlsg/box-2d-narrow-region.xml"/>
+      <scene href="../rlsg/box-2d-gripper.xml"/>
     </model>
     <start>
       <q>1.0</q>
@@ -78,7 +78,7 @@
           </world>
         </kinematics>
         <model>0</model>
-        <scene href="../rlsg/box-2d-narrow-region.xml"/>
+        <scene href="../rlsg/box-2d-gripper.xml"/>
       </model>
       <size>
         <height>768</height>
@@ -92,7 +92,7 @@
       <q>0.05</q>
       <q>0.05</q>
     </motionError>
-    <goalEpsilon>0.01</goalEpsilon>
+    <goalEpsilon>0.05</goalEpsilon>
     <!-- <useMotionError/> -->
     <uniformSampler>
       <seed>1</seed>

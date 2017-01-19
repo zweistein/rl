@@ -25,6 +25,7 @@
 //
 
 #include "NoisyModel.h"
+#include "NoisyModel2D.h"
 #include "SimpleOptimizer.h"
 #include "Verifier.h"
 #include "Viewer.h"

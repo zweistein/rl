@@ -124,6 +124,57 @@ namespace rl
 				ss2 << addr2;
 				second = ss2.str();
 			}
+
+			bool
+      Scene::getCollisionSurfaceNormal(const ::rl::math::Vector3& from, ::rl::math::Vector3& normalVector)
+      {
+        DT_Vector3 start;
+        start[0] = static_cast< DT_Scalar >(from(0));
+        start[1] = static_cast< DT_Scalar >(from(1));
+        start[2] = static_cast< DT_Scalar >(from(2));
+
+        // TODO: how to distinguish between the shapes? Maybe via getName()?
+        // Arne: First one should always be the robot!
+        Shape* eeShape = static_cast< Shape* >(this->lastCollidingShape1);
+        Shape* obstacleShape = static_cast< Shape* >(this->lastCollidingShape2);
+
+        DT_Vector3 collisionPoint;
+        DT_Bool success = DT_GetCommonPoint(
+              eeShape->complex ? eeShape->object : obstacleShape->object,
+              eeShape->complex ? obstacleShape->object : eeShape->object,
+              collisionPoint
+              );
+
+        if (DT_FALSE == success)
+        {
+          // they dont seem to be in collision at all
+          return false;
+        }
+
+        DT_Scalar param;
+        DT_Vector3 normal;
+
+        success = DT_ObjectRayCast(
+              obstacleShape->object,
+              start,
+              collisionPoint,
+              // std::numeric_limits< DT_Scalar >::max(),
+              10,
+              &param,
+              normal
+              );
+
+        if (DT_TRUE == success)
+        {
+          normalVector[0] = static_cast< ::rl::math::Real >(normal[0]);
+          normalVector[1] = static_cast< ::rl::math::Real >(normal[1]);
+          normalVector[2] = static_cast< ::rl::math::Real >(normal[2]);
+        }
+
+        return DT_TRUE == success;
+      }
+
+
 			
 			void
 			Scene::beginOverlap(void* clientData, void* object1, void* object2)

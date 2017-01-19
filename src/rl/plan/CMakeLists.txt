@@ -16,6 +16,7 @@ set(
 	MatrixPtr.h
 	Model.h
 	NoisyModel.h
+	NoisyModel2D.h
 	Optimizer.h
 	Orthogonal_k_neighbor_search.h
 	Planner.h
@@ -61,6 +62,7 @@ set(
 	GaussianSampler.cpp
 	Model.cpp
 	NoisyModel.cpp
+	NoisyModel2D.cpp
 	Optimizer.cpp
 	Planner.cpp
 	Prm.cpp

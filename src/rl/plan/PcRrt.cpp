@@ -14,6 +14,7 @@
 #include <rl/sg/solid/Scene.h>
 
 #include "NoisyModel.h"
+#include "NoisyModel2D.h"
 #include "Viewer.h"
 #include "GaussianSampler.h"
 
@@ -84,8 +85,8 @@ namespace rl
 
         // randomly decide to do a slide or not
         boost::random::uniform_int_distribution<> doSlideDistr(0, 100);
-        bool doGuardedMove = doSlideDistr(*this->gen) < 30;
-        bool doSlide = doSlideDistr(*this->gen) > 70;
+        bool doGuardedMove = doSlideDistr(*this->gen) < 20;
+        bool doSlide = doSlideDistr(*this->gen) > 80;
         // sample[...]Particles will return false if the particle set is not useful
         bool sampleResult;
         bool isInCollision = false;
@@ -106,7 +107,7 @@ namespace rl
         if (sampleResult)
         {
           // visualize particles
-          this->drawParticles(particles);
+          // this->drawParticles(particles);
           // fit a gaussian to the particles
           Gaussian gaussian(particles);
           this->drawEigenvectors(gaussian);
@@ -115,6 +116,17 @@ namespace rl
           Vertex newVertex = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(gaussian.mean));
           this->tree[0][newVertex].gState = ::boost::make_shared<GaussianState>(particles);
           this->tree[0][newVertex].gState->setColliding(isInCollision);
+          if (isInCollision)
+          {
+            ::rl::math::Vector3 rayStart, rayNormal;
+            rayStart[0] = (*this->tree[0][n.first].q)[0];
+            rayStart[1] = (*this->tree[0][n.first].q)[1];
+            rayStart[2] = 0.0;
+            if (this->solidScene->getCollisionSurfaceNormal(rayStart, rayNormal))
+            {
+              this->tree[0][newVertex].gState->setNormal(rayNormal);
+            }
+          }
           this->addEdge(chosenVertex, newVertex, this->tree[0]);
 
           // try to connect to goal
@@ -131,6 +143,7 @@ namespace rl
             ::rl::math::Matrix goalParticles;
             if (this->sampleGoalParticles(nearest, *this->goal, this->nrParticles, goalParticles))
             {
+              this->drawParticles(goalParticles);
               Gaussian goalGaussian(goalParticles);
               ::rl::math::Real error = goalGaussian.eigenvalues().maxCoeff();
               std::cout << "reached goal with error: " << error << " (max allowed: " << this->goalEpsilon << ")" << std::endl;
@@ -618,46 +631,19 @@ namespace rl
 
       particles.resize(nrParticles, this->model->getDof());
 
-      // project chosen on the plane
-      ::rl::math::Vector normal(this->model->getDof());
-      if (!this->getNormal(nearest.first, normal))
+      if (!this->tree[0][nearest.first].gState->hasNormal())
       {
-        // uncertainty distribution insufficient for retrieving normal
-        std::cout << "uncertainty distribution insufficient for retrieving normal" << std::endl;
         return false;
       }
+      ::rl::math::Vector3& storedNormal = this->tree[0][nearest.first].gState->getNormal();
+      ::rl::math::Vector normal(this->model->getDof());
+      normal[0] = storedNormal[0];
+      normal[1] = storedNormal[1];
+
+      // project goal on sliding surface
       ::rl::math::Vector pVec = *(this->tree[0][nearest.first].q);
       ::rl::math::Vector goal;
       double dist = projectOnSurface(chosen, pVec, normal, goal);
-
-      if (dist < 0)
-      {
-        dist *= -1;
-        normal *= -1;
-      }
-
-      // retrieve direction of normal
-      ::rl::math::Vector testPoint(this->model->getDof());
-      testPoint = pVec + normal*this->delta;
-      this->model->setPosition(testPoint);
-      this->model->updateFrames();
-      if (this->model->isColliding()) 
-      {
-        // inverse normal
-        normal *= -1;
-      }
-      else
-      {
-        testPoint = pVec - normal*this->delta;
-        this->model->setPosition(testPoint);
-        this->model->updateFrames();
-        if (!this->model->isColliding())
-        {
-          // no collision in any direction, this is bad
-          std::cout << "error getting normal direction" << std::endl;
-          return false;
-        }
-      }
 
       this->drawSurfaceNormal(pVec, normal);
 
@@ -679,7 +665,6 @@ namespace rl
           this->model->updateFrames();
         }
         while(!this->model->isColliding());
-
 
         //Sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
@@ -726,15 +711,16 @@ namespace rl
             if (allColls[slidingSurface])
             {
               // we moved into sliding surface, so reflect out
-              do
-              {
+              // do
+              // {
                 // move into direction of surface normal to escape from sliding surface
                 nextStep += normal * this->delta;
                 this->model->setPosition(nextStep);
                 this->model->updateFrames();
-                this->getAllCollidingShapes(allColls);
-              }
-              while (allColls[slidingSurface]);
+                // this->getAllCollidingShapes(allColls);
+              // }
+              // while (allColls[slidingSurface]);
+              // std::cout << "done" << std::endl;
 
               // check if we are in free-space or if we have another collision
               if (this->model->isColliding())
@@ -808,68 +794,74 @@ namespace rl
 
     bool PcRrt::sampleGoalParticles(const Neighbor& nearest, ::rl::math::Vector& goal, int nrParticles, ::rl::math::Matrix& particles)
     {
-      double posError = 0.01;
-      boost::random::normal_distribution<> distr(0, posError);
       particles.resize(nrParticles, this->model->getDof());
 
       int rowIdx = 0;
 
       while (rowIdx < nrParticles)
       {
-        Particle nextStep(this->model->getDof());
+        Particle init(this->model->getDof());
 
         // sample initial position
-        this->tree[0][nearest.first].gState->sample(nextStep);
+        this->tree[0][nearest.first].gState->sample(init);
+
+        Particle nextStep = init;
 
         // sample independent noise
         ::rl::math::Vector motionNoise(this->model->getDof());
+        this->model->sampleMotionError(motionNoise);
+
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->mean();
-        ::rl::math::Vector delta = goal - mean;
-
-        for (int i = 0; i < this->model->getDof(); ++i)
-        {
-          motionNoise[i] = distr(*this->gen) * delta[i];
-        }
-
 
         ::rl::math::Vector error = nextStep - mean;
-        ::rl::math::Vector target = goal + error + motionNoise;
+        ::rl::math::Vector target = goal + error;
 
-        int steps = 0;
         bool reached = false;
         bool collision = false;
-        do
+        ::rl::math::Real distance = this->model->distance(nextStep, target);
+        ::rl::math::Real step = this->delta;
+        // escape from current collision
+        do 
         {
-          ::rl::math::Real distance = this->model->distance(nextStep, target);
-          ::rl::math::Real step = distance;
 
-          if (step <= this->delta)
+          if (step >= distance)
           {
             reached = true;
+            step = distance;
           }
-          else
-          {
-            step = this->delta;
-          }
-          this->model->interpolate(nextStep, target,  step / distance, nextStep);
+
+          this->model->interpolateNoisy(init, target,  step / distance, motionNoise, nextStep);
 
           this->model->setPosition(nextStep);
           this->model->updateFrames();
 
-          collision = this->model->isColliding();
-          steps++;
+          step += this->delta;
         }
-        while (!collision && !reached);
+        while (this->model->isColliding());
 
-        if (reached)
+        if (!reached)
         {
-          particles.row(rowIdx) = nextStep;
-          rowIdx++;
+          do
+          {
+            if (step >= distance)
+            {
+              reached = true;
+              step = distance;
+            }
+
+            this->model->interpolateNoisy(init, target,  step / distance, motionNoise, nextStep);
+
+            this->model->setPosition(nextStep);
+            this->model->updateFrames();
+
+            collision = this->model->isColliding();
+            step += this->delta;
+          }
+          while (!collision && !reached);          
         }
-        else
-        {
-          return false;
-        }
+
+        particles.row(rowIdx) = nextStep;
+        rowIdx++;
       }
 
       return true;

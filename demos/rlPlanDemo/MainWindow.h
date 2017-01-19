@@ -37,6 +37,7 @@
 #include <rl/kin/Kinematics.h>
 #include <rl/mdl/Dynamic.h>
 #include <rl/plan/NoisyModel.h>
+#include <rl/plan/NoisyModel2D.h>
 #include <rl/plan/Optimizer.h>
 #include <rl/plan/Planner.h>
 #include <rl/plan/Sampler.h>
@@ -82,6 +83,7 @@ public:
 	boost::shared_ptr< rl::mdl::Dynamic > mdl2;
 	
     boost::shared_ptr< rl::plan::NoisyModel > model;
+    // boost::shared_ptr< rl::plan::NoisyModel2D > model;
 	
 	boost::shared_ptr< rl::plan::Model > model2;
 

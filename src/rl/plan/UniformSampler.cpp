@@ -27,6 +27,7 @@
 #include <rl/util/Timer.h>
 
 #include "NoisyModel.h"
+#include "NoisyModel2D.h"
 #include "UniformSampler.h"
 
 namespace rl

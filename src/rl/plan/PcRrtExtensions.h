@@ -55,7 +55,8 @@ namespace rl
       part(particles),
       gaussianDistr(particles),
       gen(42),
-      inCollision(false)
+      inCollision(false),
+      normalSet(false)
       {
         this->dims = this->gaussianDistr.covariance.rows();
         for (int i = 0; i < this->dims; ++i)
@@ -106,13 +107,31 @@ namespace rl
         return this->inCollision;
       }
 
+      ::rl::math::Vector3& getNormal()
+      {
+        return this->normal;
+      }
+
+      void setNormal(::rl::math::Vector3 normal)
+      {
+        this->normalSet = true;
+        this->normal = normal;
+      }
+
+      bool hasNormal()
+      {
+        return this->normalSet;
+      }
+
     private:
       ::rl::math::Matrix part;
+      ::rl::math::Vector3 normal;
       Gaussian gaussianDistr;
       boost::random::mt19937 gen;
       ::std::vector<boost::random::normal_distribution<> > distributions;
       int dims;
       bool inCollision;
+      bool normalSet;
     };
   }
 }

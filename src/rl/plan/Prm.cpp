@@ -32,6 +32,7 @@
 #include "Prm.h"
 #include "Sampler.h"
 #include "NoisyModel.h"
+#include "NoisyModel2D.h"
 #include "UniformSampler.h"
 #include "Verifier.h"
 #include "Viewer.h"

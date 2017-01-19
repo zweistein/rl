@@ -34,6 +34,7 @@
 #include <rl/plan/Prm.h>
 #include <rl/plan/RecursiveVerifier.h>
 #include <rl/plan/NoisyModel.h>
+#include <rl/plan/NoisyModel2D.h>
 #include <rl/plan/SimpleOptimizer.h>
 #include <rl/plan/UniformSampler.h>
 #include <rl/sg/Model.h>
@@ -95,6 +96,7 @@ main(int argc, char** argv)
 		boost::shared_ptr< rl::kin::Kinematics > kinematics(rl::kin::Kinematics::create(argv[3]));
 		
         rl::plan::NoisyModel model;
+        // rl::plan::NoisyModel2D model;
 		model.kin = kinematics.get();
 		model.model = scene->getModel(0);
 		model.scene = scene.get();

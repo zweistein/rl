@@ -37,7 +37,9 @@ namespace rl
 {
 	namespace plan
 	{
-        class NoisyModel;
+    class NoisyModel;
+    class NoisyModel2D;
+
 		class Viewer;
 		
 		class Planner
@@ -77,7 +79,8 @@ namespace rl
 			/** Goal configuration. */
 			::rl::math::Vector* goal;
 			
-            NoisyModel* model;
+      NoisyModel* model;
+      // NoisyModel2D* model;
 			
 			/** Start configuration. */
 			::rl::math::Vector* start;
