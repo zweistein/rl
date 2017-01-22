@@ -885,16 +885,19 @@ namespace rl
     {
       collidingShapes.clear();
       ::rl::sg::Body *sceneBody = this->solidScene->getModel(1)->getBody(0);
-      ::rl::sg::Shape *robotShape = this->solidScene->getModel(0)->getBody(2)->getShape(0);
+      ::rl::sg::Body *robotBody = this->solidScene->getModel(0)->getBody(2);
+      // ::rl::sg::Shape *robotShape = this->solidScene->getModel(0)->getBody(2)->getShape(0);
 
       ::std::string shape1, shape2;
       for (size_t i = 0; i < sceneBody->getNumShapes(); ++i)
       {
-
-        if (this->solidScene->areColliding(sceneBody->getShape(i), robotShape))
+        for (size_t j = 0; j < robotBody->getNumShapes(); ++j)
         {
-          this->solidScene->lastCollidingShapes(shape1, shape2);
-          collidingShapes[shape1] = true;
+          if (this->solidScene->areColliding(sceneBody->getShape(i), robotBody->getShape(j)))
+          {
+            this->solidScene->lastCollidingShapes(shape1, shape2);
+            collidingShapes[shape1] = true;
+          }
         }
 
       }
