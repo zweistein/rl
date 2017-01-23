@@ -14,7 +14,7 @@ Transform {
         }
         DEF body1 Transform {
           children 
-            Shape {
+            DEF sensor Shape {
               appearance Appearance {
                 material Material {
                   diffuseColor 1 1 0
