@@ -64,7 +64,7 @@ namespace rl
       virtual bool solve();
 
       void sampleDirection(::rl::math::Vector& rd);
-      bool sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::std::vector<Particle>& particles);
+      bool sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, bool goalConnect, ::std::vector<Particle>& particles);
       bool sampleGuardedParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::std::vector<Particle>& particles);
       bool sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::std::vector<Particle>& particles);
 

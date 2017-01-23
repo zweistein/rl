@@ -112,7 +112,10 @@ namespace rl
             ::std::stringstream ss2;
             ss2 << addr2;
             std::pair<std::string, std::string> collShapes(ss1.str(),ss2.str());
-            lastCollisions[collShapes]=lastCollisionPoint;
+            CollisionQueryResult res;
+            res.commonPoint = lastCollisionPoint;
+            res.isSensor = (first->getName() == "sensor");
+            lastCollisions[collShapes]=res;
 
             return true;
           }
@@ -329,7 +332,7 @@ namespace rl
 				
 				DT_Vector3 vector2;
 				vector2[0] = static_cast< DT_Scalar >(target(0));
-				vector2[1] = static_cast< DT_Scalar >(target(1));
+        vector2[1] = static_cast< DT_Scalar >(target(1));
 				vector2[2] = static_cast< DT_Scalar >(target(2));
 				
 				DT_Scalar param;

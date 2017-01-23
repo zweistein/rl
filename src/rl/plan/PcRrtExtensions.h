@@ -133,11 +133,12 @@ namespace rl
         }
       }
 
-      void sampleConfigurationFromParticle(::rl::math::Vector& q)
+
+      void sampleConfigurationFromParticle(::rl::math::Vector& q, int id)
       {
         assert(q.size() == this->dims);
-        boost::random::uniform_int_distribution<> particleDistr(0, particles.size()-1);
-        q = this->particles[particleDistr(this->gen)].config;
+        //boost::random::uniform_int_distribution<> particleDistr(0, particles.size()-1);
+        q = this->particles[id%particles.size()].config;
       }
 
 

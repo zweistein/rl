@@ -73,8 +73,15 @@ namespace rl
 				
 				void setMargin(const ::rl::math::Real& margin);
 
+
+        struct CollisionQueryResult
+        {
+          rl::math::Vector3 commonPoint;
+          bool isSensor;
+        };
+
         //key is pair of shapes, values is a point in the intersection of the shapes
-        typedef std::map<std::pair<std::string, std::string> , rl::math::Vector3 > CollisionMap;
+        typedef std::map<std::pair<std::string, std::string> , CollisionQueryResult > CollisionMap;
 
         const CollisionMap& getLastCollisions(){return this->lastCollisions;}
 

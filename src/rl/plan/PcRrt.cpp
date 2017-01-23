@@ -161,7 +161,7 @@ namespace rl
         bool sampleResult = false;
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
         {
-          sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles);
+         //sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles);
         }
         else if (doGuardedMove)
         {
@@ -169,21 +169,22 @@ namespace rl
         }
         else
         {
-          sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, particles);
+          sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, false, particles);
         }
 
 
         if (sampleResult)
         {
           // visualize particles
-          this->drawParticles(particles);
+          //this->drawParticles(particles);
 
           ::boost::shared_ptr<GaussianState> gaussianState = ::boost::make_shared<GaussianState>(particles);
           Gaussian g = gaussianState->configGaussian();
-          this->drawEigenvectors(g, 1.0);
+          //this->drawEigenvectors(g, 1.0);
 
           // add a new vertex and edge
           VectorPtr mean = ::boost::make_shared<::rl::math::Vector>(g.mean);
+          this->viewer->drawConfiguration(g.mean);
           Vertex newVertex = this->addVertex(this->tree[0], mean);
           //this->model->setPosition(*mean);
           //::boost::shared_ptr<::rl::math::Transform> tptr = ::boost::make_shared<::rl::math::Transform>(this->model->forwardPosition());
@@ -205,7 +206,7 @@ namespace rl
           if (NULL != possibleGoal.q && this->areEqual(*possibleGoal.q, *this->goal)) {
             // sample particles for the connect step
             ::std::vector<Particle> goalParticles;
-            if (this->sampleConnectParticles(nearest, *this->goal, this->nrParticles, goalParticles))
+            if (this->sampleConnectParticles(nearest, *this->goal, this->nrParticles, true, goalParticles))
             {
               ::boost::shared_ptr<GaussianState> goalState = ::boost::make_shared<GaussianState>(goalParticles);
               ::rl::math::Real error = goalState->configGaussian().eigenvalues().maxCoeff();
@@ -494,7 +495,7 @@ namespace rl
     /**
       Samples a set of particles for a move through free-space to a target configuration (chosen)
     */
-    bool PcRrt::sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::std::vector<Particle>& particles)
+    bool PcRrt::sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, bool goalConnect, ::std::vector<Particle>& particles)
     {
       particles.clear();
 
@@ -514,7 +515,7 @@ namespace rl
         // sample a starting point from the gaussian
         ::rl::math::Vector init(this->model->getDof());
 
-        this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init);
+        this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init, pIdx);
 
         ::rl::math::Vector nextStep = init;
 
@@ -572,65 +573,83 @@ namespace rl
         }
         while (inInitialCollision || (!collision && !reached));
 
-        if (steps > 1 && reached && !collision)
+        if(goalConnect)
         {
-          Particle p(nextStep);
-          particles.push_back(p);
-          pIdx++;
-          if (shape1 == "")
-          {
-            // first sample, init contact state shapes
-            shape1 = "no_collision";
-            shape2 = "no_collision";
-          }
-          else if (shape1 != "no_collision" || shape2 != "no_collision")
-          {
-            return false;
-          }
-
-        }
-        else if (steps > 1 && collision)
-        {
-          rl::math::Vector3 normal;
-          rl::sg::solid::Scene::CollisionMap collMap =  this->solidScene->getLastCollisions();
-
-          if(!this->solidScene->getCollisionSurfaceNormal(initPoint,normal))
-            return false;
-
-          if(collMap.size()>1)
-          {
-            std::cout<<"Connect move ends in a state with two collisions - this should not happen!"<<std::endl;
-            return false;
-          }
-
-          std::string s1=collMap.begin()->first.first;
-          std::string s2=collMap.begin()->first.second;
-
-          if (shape1 == "")
-          {
-            // first sample, init contact state shapes
-            shape1 = s1;
-            shape2 = s2;
-          }
-          else if (s1 != shape1 || s2 != shape2)
-          {
-            // not every collision is between the same two shapes, -> not one contact state
-            return false;
-          }
-
           // valid particle, store it
-          std::vector<Contact> contacts;
-          rl::math::Vector3 contactPoint = collMap.begin()->second;
-          contacts.push_back(Contact(contactPoint,normal,s1,s2));
-          Particle p(nextStep, contacts);
+          Particle p(nextStep);
           particles.push_back(p);
 
           pIdx++;
         }
         else
         {
-          // we moved just one step until the next collision, or collided in last step
-          return false;
+          if (steps > 1 && reached && !collision)
+          {
+            Particle p(nextStep);
+            particles.push_back(p);
+            pIdx++;
+            if (shape1 == "")
+            {
+              // first sample, init contact state shapes
+              shape1 = "no_collision";
+              shape2 = "no_collision";
+            }
+            else if (shape1 != "no_collision" || shape2 != "no_collision")
+            {
+              return false;
+            }
+
+          }
+          else if (steps > 1 && collision)
+          {
+            rl::math::Vector3 normal;
+            rl::sg::solid::Scene::CollisionMap collMap =  this->solidScene->getLastCollisions();
+
+            //Body shape must be sensor
+            if(!collMap.begin()->second.isSensor)
+              return false;
+
+
+            if(!this->solidScene->getCollisionSurfaceNormal(initPoint,normal))
+              return false;
+
+            if(collMap.size()>1)
+            {
+              std::cout<<"Connect move ends in a state with two collisions - this should not happen!"<<std::endl;
+              return false;
+            }
+
+            std::string s1=collMap.begin()->first.first;
+
+
+            std::string s2=collMap.begin()->first.second;
+
+            if (shape1 == "")
+            {
+              // first sample, init contact state shapes
+              shape1 = s1;
+              shape2 = s2;
+            }
+            else if (s1 != shape1 || s2 != shape2)
+            {
+              // not every collision is between the same two shapes, -> not one contact state
+              return false;
+            }
+
+            // valid particle, store it
+            std::vector<Contact> contacts;
+            rl::math::Vector3 contactPoint = collMap.begin()->second.commonPoint;
+            contacts.push_back(Contact(contactPoint,normal,s1,s2));
+            Particle p(nextStep, contacts);
+            particles.push_back(p);
+
+            pIdx++;
+          }
+          else
+          {
+            // we moved just one step until the next collision, or collided in last step
+            return false;
+          }
         }
       }
 
@@ -661,7 +680,7 @@ namespace rl
       while (pIdx < nrParticles)
       {
         rl::math::Vector init(this->model->getDof());
-        this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init);
+        this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init, pIdx);
 
         // sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
@@ -672,7 +691,7 @@ namespace rl
         ::rl::math::Vector initialError = init - mean;
 
 #ifdef RANDOM_DIRECTION
-        ::rl::math::Vector target = init + dir + initialError;
+        ::rl::math::Vector target = init + dir;
 #else
         ::rl::math::Vector target = chosen + initialError;
 
@@ -723,6 +742,12 @@ namespace rl
         {
 
           rl::sg::solid::Scene::CollisionMap collMap =  this->solidScene->getLastCollisions();
+
+          //collision must be perceivable by sensor
+          if(!collMap.begin()->second.isSensor)
+            return false;
+
+
           rl::math::Vector3 normal;
           if(!this->solidScene->getCollisionSurfaceNormal(initPoint,normal))
             return false;
@@ -751,7 +776,7 @@ namespace rl
 
           // valid particle, store it
           std::vector<Contact> contacts;
-          rl::math::Vector3 contactPoint = collMap.begin()->second;
+          rl::math::Vector3 contactPoint = collMap.begin()->second.commonPoint;
           contacts.push_back(Contact(contactPoint,normal,s1,s2));
           Particle p(nextStep, contacts);
           particles.push_back(p);
@@ -912,7 +937,7 @@ namespace rl
       {
         // sample a starting point
         ::rl::math::Vector init(this->model->getDof());
-        this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init);
+        this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init, pIdx);
 
         this->model->setPosition(init);
         this->model->updateFrames();
@@ -1023,6 +1048,11 @@ namespace rl
           std::vector<Contact> contacts;
           for(::rl::sg::solid::Scene::CollisionMap::iterator it = allColls.begin(); it != allColls.end(); it++)
           {
+            //Body shape must be sensor
+            if(!it->second.isSensor)
+              return false;
+
+
             std::string c1 = it->first.first;
             std::string c2 = it->first.second;
 
@@ -1033,7 +1063,7 @@ namespace rl
             }
             else
             {
-              if(!this->solidScene->getCollisionSurfaceNormal(it->second+slidingNormal*3.0*this->delta,contactNormal))
+              if(!this->solidScene->getCollisionSurfaceNormal(it->second.commonPoint+slidingNormal*3.0*this->delta,contactNormal))
               {
                 this->model->updateTool(cp_neg);
                 std::cout<<"failed to compute normal"<<std::endl;
@@ -1041,7 +1071,7 @@ namespace rl
               }
             }
 
-            contacts.push_back(Contact(it->second,contactNormal,c1,c2));
+            contacts.push_back(Contact(it->second.commonPoint,contactNormal,c1,c2));
           }
           Particle p(nextStep, contacts);
           particles.push_back(p);
