@@ -118,9 +118,25 @@ namespace rl
       // add the start configuation
       this->begin[0] = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(*this->start));
       // set initial state based on one particle (covariance is zero)
-      Particle p(*(this->start));
+
       ::std::vector<Particle> v;
-      v.push_back(p);
+      ::rl::math::Vector initialError(this->model->getDof());
+
+      for(int i=0; i< this->nrParticles; i++)
+      {
+        this->model->sampleInitialError(initialError);
+        ::rl::math::Vector sample = *this->start;
+        for(int j=0; j<this->model->getDof(); j++)
+        {
+          sample[j]+=initialError[j];
+        }
+        Particle p(sample);
+        v.push_back(p);
+      }
+
+
+
+
       this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(v);
 
       timer.start();

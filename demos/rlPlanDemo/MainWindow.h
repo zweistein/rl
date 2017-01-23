@@ -86,6 +86,7 @@ public:
 	boost::shared_ptr< rl::plan::Model > model2;
 
     boost::shared_ptr< rl::math::Vector > motionError;
+    boost::shared_ptr< rl::math::Vector > initialError;
 	
 	QMutex mutex;
 	

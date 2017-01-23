@@ -48,6 +48,31 @@ namespace rl
     }
 
     void
+    NoisyModel::sampleInitialError(::rl::math::Vector &error)
+    {
+      if (NULL == this->motionErrorGen)
+      {
+        this->motionErrorGen = ::boost::make_shared<::boost::random::mt19937>(42);
+      }
+
+      if(this->motionError->rows()!=this->getDof())
+      {
+        std::cout << "warning: did not set initial error - will use default value 0.05" << std::endl;
+        this->initialError->setOnes(this->getDof());
+        (*this->motionError)*=0.05;
+      }
+
+      for(int i=0; i<this->getDof(); i++)
+      {
+        // sample an initial error
+        ::boost::random::normal_distribution<> errorDistr(0, (*this->initialError)(i));
+        error[i] = errorDistr(*this->motionErrorGen);
+      }
+
+
+    }
+
+    void
     NoisyModel::sampleMotionError(::rl::math::Vector &error)
     {
       if (NULL == this->motionErrorGen)

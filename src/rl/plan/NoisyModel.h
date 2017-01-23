@@ -46,14 +46,18 @@ namespace rl
       virtual ~NoisyModel();
 
       void sampleMotionError(::rl::math::Vector &error);
+      void sampleInitialError(::rl::math::Vector &error);
 
       void interpolateNoisy(const ::rl::math::Vector& q1, const ::rl::math::Vector& q2, const ::rl::math::Real& alpha, const ::rl::math::Vector& noise, ::rl::math::Vector& q) const;
 
 
       ::rl::math::Vector* motionError;
 
+      ::rl::math::Vector* initialError;
+
      private:
       ::boost::shared_ptr<::boost::random::mt19937> motionErrorGen;
+
 
     };
   }

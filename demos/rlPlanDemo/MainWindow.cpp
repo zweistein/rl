@@ -1353,14 +1353,23 @@ MainWindow::load(const QString& filename)
 		rl::plan::PcRrt* pcRrt = static_cast< rl::plan::PcRrt* >(this->planner.get()); 
 		pcRrt->delta = path.eval("number(delta)", planner.getNodeTab(0)).getFloatval(1.0f);
 
-        rl::xml::Object motionError = path.eval("//motionError//q");
-        this->motionError = boost::make_shared< rl::math::Vector >(motionError.getNodeNr());
-        this->model->motionError = this->motionError.get();
+    rl::xml::Object motionError = path.eval("//motionError//q");
+    this->motionError = boost::make_shared< rl::math::Vector >(motionError.getNodeNr());
+    this->model->motionError = this->motionError.get();
 
-        for (int i = 0; i < motionError.getNodeNr(); ++i)
-        {
-            (*this->model->motionError)(i) = std::atof(motionError.getNodeTab(i).getContent().c_str());
-        }
+    for (int i = 0; i < motionError.getNodeNr(); ++i)
+    {
+        (*this->model->motionError)(i) = std::atof(motionError.getNodeTab(i).getContent().c_str());
+    }
+
+    rl::xml::Object initialError = path.eval("//initialError//q");
+    this->initialError = boost::make_shared< rl::math::Vector >(initialError.getNodeNr());
+    this->model->initialError = this->initialError.get();
+
+    for (int i = 0; i < initialError.getNodeNr(); ++i)
+    {
+        (*this->model->initialError)(i) = std::atof(initialError.getNodeTab(i).getContent().c_str());
+    }
 		
 		if ("deg" == path.eval("string(delta/@unit)", planner.getNodeTab(0)).getStringval())
 		{
@@ -1394,14 +1403,23 @@ MainWindow::load(const QString& filename)
 		
 		rrtCon->epsilon = path.eval("number(epsilon)", planner.getNodeTab(0)).getFloatval(1.0e-3f);
 
-        rl::xml::Object motionError = path.eval("//motionError//q");
-        this->motionError = boost::make_shared< rl::math::Vector >(motionError.getNodeNr());
-        this->model->motionError = this->motionError.get();
+    rl::xml::Object motionError = path.eval("//motionError//q");
+    this->motionError = boost::make_shared< rl::math::Vector >(motionError.getNodeNr());
+    this->model->motionError = this->motionError.get();
 
-        for (int i = 0; i < motionError.getNodeNr(); ++i)
-        {
-            (*this->model->motionError)(i) = std::atof(motionError.getNodeTab(i).getContent().c_str());
-        }
+    for (int i = 0; i < motionError.getNodeNr(); ++i)
+    {
+        (*this->model->motionError)(i) = std::atof(motionError.getNodeTab(i).getContent().c_str());
+    }
+
+    rl::xml::Object initialError = path.eval("//initialError//q");
+    this->initialError = boost::make_shared< rl::math::Vector >(initialError.getNodeNr());
+    this->model->initialError = this->initialError.get();
+
+    for (int i = 0; i < initialError.getNodeNr(); ++i)
+    {
+        (*this->model->initialError)(i) = std::atof(initialError.getNodeTab(i).getContent().c_str());
+    }
 
 		rrtCon->useMotionError = path.eval("count(useMotionError) > 0", planner.getNodeTab(0)).getBoolval() ? true : false;
 		

@@ -86,13 +86,17 @@
       </size>
       <wait/>
     </viewer>
-    <delta>0.01</delta>
-    <nrParticles>10</nrParticles>
+    <delta>0.005</delta>
+    <nrParticles>20</nrParticles>
     <motionError>
-      <q>0.05</q>
-      <q>0.05</q>
+      <q>0.0</q>
+      <q>0.0</q>
     </motionError>
-    <goalEpsilon>0.05</goalEpsilon>
+    <initialError>
+      <q>0.3</q>
+      <q>0.3</q>
+    </initialError>
+    <goalEpsilon>0.02</goalEpsilon>
     <!-- <useMotionError/> -->
     <uniformSampler>
       <seed>1</seed>
