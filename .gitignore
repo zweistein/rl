@@ -12,3 +12,10 @@
 *.out
 *.slo
 *.so
+*.*~
+*.user
+build-rl-gmp-Desktop-Debug
+build-rl-gmp-Desktop-Release
+Release
+Debug
+
