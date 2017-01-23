@@ -31,6 +31,7 @@
 #include <rl/math/Quaternion.h>
 #include <rl/math/Unit.h>
 #include <rl/plan/Eet.h>
+#include <rl/plan/PcRrt.h>
 #include <rl/plan/Prm.h>
 #include <rl/plan/Rrt.h>
 #include <rl/util/Timer.h>
@@ -294,29 +295,50 @@ Thread::run()
 	
 	if (solved)
 	{
-		if (this->swept)
-		{
-			this->drawSweptVolume(path);
-			return;
-		}
-		
-		this->drawConfigurationPath(path);
-		
-		if (!this->running) return;
-		
-		if (NULL != MainWindow::instance()->optimizer)
-		{
-			usleep(static_cast< std::size_t >(2.0f * 1000.0f * 1000.0f));
-			
-			std::cout << "optimize() ... " << std::endl;;
-			timer.start();
-			MainWindow::instance()->optimizer->process(path);
-			timer.stop();
-			std::cout << "optimize() " << timer.elapsed() * 1000.0f << " ms" << std::endl;
-			
-			this->drawConfigurationPath(path);
-		}
-		
+    if (rl::plan::PcRrt* pcrrt = dynamic_cast< rl::plan::PcRrt* >(MainWindow::instance()->planner.get()))
+    {
+
+
+      for(int i=0; i<pcrrt->nrParticles; i++)
+      {
+        pcrrt->getPath(path, i);
+        if (this->swept)
+        {
+          this->drawSweptVolume(path);
+          return;
+        }
+
+        this->drawConfigurationPath(path);
+      }
+    }
+    else
+    {
+
+
+      if (this->swept)
+      {
+        this->drawSweptVolume(path);
+        return;
+      }
+
+      this->drawConfigurationPath(path);
+
+      if (!this->running) return;
+
+      if (NULL != MainWindow::instance()->optimizer)
+      {
+        usleep(static_cast< std::size_t >(2.0f * 1000.0f * 1000.0f));
+
+        std::cout << "optimize() ... " << std::endl;;
+        timer.start();
+        MainWindow::instance()->optimizer->process(path);
+        timer.stop();
+        std::cout << "optimize() " << timer.elapsed() * 1000.0f << " ms" << std::endl;
+
+        this->drawConfigurationPath(path);
+      }
+    }
+
 		rl::math::Vector diff(MainWindow::instance()->model->getDof());
 		rl::math::Vector inter(MainWindow::instance()->model->getDof());
 		

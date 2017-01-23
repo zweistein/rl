@@ -59,7 +59,7 @@ namespace rl
       int nrParticles;
       ::rl::math::Real goalEpsilon;
       ::rl::sg::solid::Scene *solidScene;
-      
+      void getPath(VectorList& path, int i);
     protected:
       virtual bool solve();
 
@@ -73,7 +73,7 @@ namespace rl
       double projectOnSurface(const ::rl::math::Vector3& point, const ::rl::math::Vector3& pointOnSurface, const ::rl::math::Vector3& normal, ::rl::math::Vector3& out);
       bool moveConfigOnSurface(const ::rl::math::Vector& config, const ::rl::math::Vector3& pointOnSurface, const ::rl::math::Vector3& normal, ::rl::math::Vector& out);
       const rl::sg::solid::Scene::CollisionMap&  getAllCollidingShapes();
-      void getPath(VectorList& path);
+
       //bool getNormal(const Vertex& vertex, ::rl::math::Vector& normal);
       void drawParticles(const ::std::vector<Particle>& particles);
       void drawEigenvectors(Gaussian& gaussian, ::rl::math::Real scale);

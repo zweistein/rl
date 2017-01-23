@@ -489,8 +489,8 @@ Viewer::drawConfigurationPath(const rl::plan::VectorList& path)
 {
 	this->path->enableNotify(false);
 	
-	this->pathCoordinate->point.setNum(0);
-	this->pathIndexedLineSet->coordIndex.setNum(0);
+//	this->pathCoordinate->point.setNum(0);
+//	this->pathIndexedLineSet->coordIndex.setNum(0);
 	
 	rl::math::Vector inter(this->model->getDof());
 	
@@ -656,7 +656,7 @@ Viewer::drawSweptVolume(const rl::plan::VectorList& path)
 {
 	this->sweptGroup->enableNotify(false);
 	
-	this->sweptGroup->removeAllChildren();
+  //this->sweptGroup->removeAllChildren();
 	
 	rl::math::Vector inter(this->model->getDof());
 	
@@ -781,8 +781,8 @@ Viewer::drawWorkPath(const rl::plan::VectorList& path)
 {
 	this->path3->enableNotify(false);
 	
-	this->path3Coordinate->point.setNum(0);
-	this->path3IndexedLineSet->coordIndex.setNum(0);
+  //this->path3Coordinate->point.setNum(0);
+  //this->path3IndexedLineSet->coordIndex.setNum(0);
 	
 	for (rl::plan::VectorList::const_iterator i = path.begin(); i != path.end(); ++i)
 	{

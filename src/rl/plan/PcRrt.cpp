@@ -316,22 +316,25 @@ namespace rl
 
     /**
             Computes a path from start to goal and incorporates motion error if requested.
-          */
-    void PcRrt::getPath(VectorList& path)
-    {
-      Vertex i = this->end[0];
+    */
 
+    void PcRrt::getPath(VectorList& path, int count)
+    {
+      path.clear();
+      Vertex i = this->end[0];
+      ::rl::math::Vector q(this->model->getDof());;
       while (i != this->begin[0])
       {      
         ::boost::shared_ptr<GaussianState> gs = this->tree[0][i].gState;
-        Particle p = *(gs->getParticles().begin());
-        path.push_front(p.config);
+
+        int idx = count % gs->getParticles().size();
+        path.push_front(gs->getParticles()[idx].config);
         i = ::boost::source(*::boost::in_edges(i, this->tree[0]).first, this->tree[0]);
       }
 
       ::boost::shared_ptr<GaussianState> gs = this->tree[0][i].gState;
-      Particle p = *(gs->getParticles().begin());
-      path.push_front(p.config);
+      int idx = count % gs->getParticles().size();
+      path.push_front(gs->getParticles()[idx].config);
 
       if (this->useMotionError)
       {
