@@ -55,7 +55,7 @@ namespace rl
 				
 				bool areColliding(::rl::sg::Shape* first, ::rl::sg::Shape* second);
 
-        void lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& point);
+        //void lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& point);
 				
 				::rl::sg::Model* create();
 				
@@ -87,7 +87,7 @@ namespace rl
 
         void resetCollisionBuffer(){lastCollisions.clear();}
 
-        bool getCollisionSurfaceNormal(const ::rl::math::Vector3& from, ::rl::math::Vector3& normalVector);
+        bool getCollisionSurfaceNormal(const ::rl::math::Vector3& from, const ::rl::math::Vector3& target, const std::string& eeId, const std::string& obstId, ::rl::math::Vector3& normalVector);
 
 				
 				BP_SceneHandle broad;
@@ -101,12 +101,12 @@ namespace rl
 				
 				static void endOverlap(void* clientData, void* object1, void* object2);
 
-				::rl::sg::Shape* lastCollidingShape1;
-				::rl::sg::Shape* lastCollidingShape2;
         ::rl::math::Vector3 lastCollisionPoint;
-
          CollisionMap lastCollisions;
+
+         std::map<std::string, ::rl::sg::solid::Shape*> shapeMap;
 			};
+
 		}
 	}
 }

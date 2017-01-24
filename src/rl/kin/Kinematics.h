@@ -277,6 +277,7 @@ namespace rl
 			const ::rl::math::Transform& tool(const ::std::size_t& i = 0) const;
 
       void updateTool(const  ::rl::math::Transform& newToolDelta, const ::std::size_t& i=0);
+      void resetTool(const ::std::size_t& i=0);
 			
 			virtual ::rl::math::Real transformedDistance(const ::rl::math::Real& d) const;
 			
@@ -378,6 +379,8 @@ namespace rl
 			::std::vector< Edge > tools;
 			
 			::std::vector< Transform* > transforms;
+
+      ::rl::math::Transform originalToolTransform;
 			
 			Tree tree;
 			

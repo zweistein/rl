@@ -71,7 +71,7 @@ namespace rl
       bool isEqualCollisionState(::rl::sg::solid::Scene::CollisionMap& first, ::rl::sg::solid::Scene::CollisionMap& second);
 
       double projectOnSurface(const ::rl::math::Vector3& point, const ::rl::math::Vector3& pointOnSurface, const ::rl::math::Vector3& normal, ::rl::math::Vector3& out);
-      bool moveConfigOnSurface(const ::rl::math::Vector& config, const ::rl::math::Vector3& pointOnSurface, const ::rl::math::Vector3& normal, ::rl::math::Vector& out);
+      bool moveConfigOnSurface(const ::rl::math::Vector& config, const ::rl::math::Vector3& pointOnSurface, const ::rl::math::Vector3& normal, const std::pair<std::string, std::string>& collPair, ::rl::math::Vector& out);
       const rl::sg::solid::Scene::CollisionMap&  getAllCollidingShapes();
 
       //bool getNormal(const Vertex& vertex, ::rl::math::Vector& normal);

@@ -554,5 +554,19 @@ namespace rl
       }
     }
 
+
+    void Model::resetTool(const ::std::size_t& i)
+    {
+      if (NULL != this->kin)
+      {
+        this->kin->resetTool(i);
+      }
+      else
+      {
+        std::cout<<"NOT IMPLEMENTED FOR MDL!!!"<<std::endl;
+        assert(0);
+      }
+    }
+
 	}
 }

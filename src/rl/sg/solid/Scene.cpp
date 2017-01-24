@@ -49,9 +49,7 @@ namespace rl
 				::rl::sg::DistanceScene(),
 				::rl::sg::RaycastScene(),
 				::rl::sg::SimpleScene(),
-				scene(DT_CreateScene()),
-				lastCollidingShape1(nullptr),
-				lastCollidingShape2(nullptr)
+        scene(DT_CreateScene())
 			{
 				this->broad = BP_CreateScene(this, Scene::beginOverlap, Scene::endOverlap);
 			}
@@ -97,21 +95,23 @@ namespace rl
             point
           ))
           {
-            this->lastCollidingShape1 = first;
-            this->lastCollidingShape2 = second;
             for(int i=0; i<3; i++)
             {
               this->lastCollisionPoint(i)=point[i];
             }
 
-            const void *addr1 = static_cast<const void*>(this->lastCollidingShape1);
+            const void *addr1 = static_cast<const void*>(first);
             ::std::stringstream ss1;
             ss1 << addr1;
 
-            const void *addr2 = static_cast<const void*>(this->lastCollidingShape2);
+            const void *addr2 = static_cast<const void*>(second);
             ::std::stringstream ss2;
             ss2 << addr2;
             std::pair<std::string, std::string> collShapes(ss1.str(),ss2.str());
+
+            shapeMap[ss1.str()]=static_cast<rl::sg::solid::Shape*>(first);
+            shapeMap[ss2.str()]=static_cast<rl::sg::solid::Shape*>(second);
+
             CollisionQueryResult res;
             res.commonPoint = lastCollisionPoint;
             res.isSensor = (first->getName() == "sensor");
@@ -141,25 +141,27 @@ namespace rl
 				}
 			}
 
-			void
-      Scene::lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& point)
-			{
-				const void *addr1 = static_cast<const void*>(this->lastCollidingShape1);
-				::std::stringstream ss1;
-				ss1 << addr1;
-				first = ss1.str();
+//			void
+//      Scene::lastCollidingShapes(::std::string& first, ::std::string& second, ::rl::math::Vector3& point)
+//			{
+//				const void *addr1 = static_cast<const void*>(this->lastCollidingShape1);
+//				::std::stringstream ss1;
+//				ss1 << addr1;
+//				first = ss1.str();
 
-				const void *addr2 = static_cast<const void*>(this->lastCollidingShape2);
-				::std::stringstream ss2;
-				ss2 << addr2;
-				second = ss2.str();
+//				const void *addr2 = static_cast<const void*>(this->lastCollidingShape2);
+//				::std::stringstream ss2;
+//				ss2 << addr2;
+//				second = ss2.str();
 
-        point = this->lastCollisionPoint;
-			}
+//        point = this->lastCollisionPoint;
+//			}
 			
       bool
-      Scene::getCollisionSurfaceNormal(const ::rl::math::Vector3& from, ::rl::math::Vector3& normalVector)
+      Scene::getCollisionSurfaceNormal(const ::rl::math::Vector3& from, const ::rl::math::Vector3& target, const std::string& eeId, const std::string& obstId, ::rl::math::Vector3& normalVector)
       {
+        ::rl::math::Vector3 target_displaced = target +0.01*(target-from);
+
         DT_Vector3 start;
         start[0] = static_cast< DT_Scalar >(from(0));
         start[1] = static_cast< DT_Scalar >(from(1));
@@ -167,30 +169,36 @@ namespace rl
 
         // TODO: how to distinguish between the shapes? Maybe via getName()?
         // Arne: First one should always be the robot!
-        Shape* eeShape = static_cast< Shape* >(this->lastCollidingShape1);
-        Shape* obstacleShape = static_cast< Shape* >(this->lastCollidingShape2);
+        Shape* eeShape = this->shapeMap[eeId];
+        Shape* obstacleShape = this->shapeMap[obstId];
 
         DT_Vector3 collisionPoint;
-        DT_Bool success = DT_GetCommonPoint(
-              eeShape->complex ? eeShape->object : obstacleShape->object,
-              eeShape->complex ? obstacleShape->object : eeShape->object,
-              collisionPoint
-              );
+        collisionPoint[0] = static_cast< DT_Scalar >(target_displaced(0));
+        collisionPoint[1] = static_cast< DT_Scalar >(target_displaced(1));
+        collisionPoint[2] = static_cast< DT_Scalar >(target_displaced(2));
 
-        if (DT_FALSE == success)
-        {
-          // they dont seem to be in collision at all
-          return false;
-        }
+
+
+//        DT_Bool success = DT_GetCommonPoint(
+//              eeShape->complex ? eeShape->object : obstacleShape->object,
+//              eeShape->complex ? obstacleShape->object : eeShape->object,
+//              collisionPoint
+//              );
+
+//        if (DT_FALSE == success)
+//        {
+//          // they dont seem to be in collision at all
+//          return false;
+//        }
 
         DT_Scalar param;
         DT_Vector3 normal;
 
-        success = DT_ObjectRayCast(
+       DT_Bool success = DT_ObjectRayCast(
               obstacleShape->object,
               start,
               collisionPoint,
-              std::numeric_limits< DT_Scalar >::max(),
+              1000.0,
               &param,
               normal
               );

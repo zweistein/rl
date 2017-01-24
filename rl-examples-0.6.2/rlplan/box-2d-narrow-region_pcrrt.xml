@@ -93,8 +93,8 @@
       <q>0.0</q>
     </motionError>
     <initialError>
-      <q>0.3</q>
-      <q>0.3</q>
+      <q>0.1</q>
+      <q>0.1</q>
     </initialError>
     <goalEpsilon>0.02</goalEpsilon>
     <!-- <useMotionError/> -->

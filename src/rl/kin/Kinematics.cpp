@@ -853,8 +853,17 @@ namespace rl
     Kinematics::updateTool(const  ::rl::math::Transform& newToolDelta, const ::std::size_t& i)
     {
 
-      this->tree[this->tools[i]]->transform = this->tree[this->tools[i]]->transform*newToolDelta;
+      this->originalToolTransform = this->tree[this->tools[i]]->transform;
+
+      this->tree[this->tools[i]]->transform = this->originalToolTransform*newToolDelta;
     }
+
+    void
+    Kinematics::resetTool(const ::std::size_t& i)
+    {
+      this->tree[this->tools[i]]->transform = this->originalToolTransform;
+    }
+
 
 		
 		::rl::math::Real

@@ -32,85 +32,85 @@ namespace rl
     {
       // comment in for random seed
       // this->gen = ::boost::make_shared<boost::random::mt19937>(std::time(0));
-      this->gen = ::boost::make_shared<boost::random::mt19937>(44);
+      this->gen = ::boost::make_shared<boost::random::mt19937>(43);
     }
 
     //Needed for Guarded moves
-      void PcRrt::sampleDirection(::rl::math::Vector& rd)
+    void PcRrt::sampleDirection(::rl::math::Vector& rd)
+    {
+      boost::random::normal_distribution<> distr(0, 1);
+      int dim = rd.rows();
+      double rdsum = 0;
+      for(int i=0; i<dim; i++)
       {
-          boost::random::normal_distribution<> distr(0, 1);
-          int dim = rd.rows();
-          double rdsum = 0;
-          for(int i=0; i<dim; i++)
-          {
-              rd[i] = distr(*this->gen);
-              rdsum+=rd[i]*rd[i];
-          }
-          rdsum = sqrt(rdsum);
-          for(int i=0; i<dim; i++)
-          {
-              rd[i] /= rdsum;
-          }
+          rd[i] = distr(*this->gen);
+          rdsum+=rd[i]*rd[i];
+      }
+      rdsum = sqrt(rdsum);
+      for(int i=0; i<dim; i++)
+      {
+          rd[i] /= rdsum;
+      }
+    }
+
+    PcRrt::Neighbor PcRrt::nearest(const Tree& tree, const ::rl::math::Vector& chosen)
+    {
+      struct NeighborCompare
+      {
+        bool operator()(const Neighbor& lhs, const Neighbor& rhs) const
+        {
+          return lhs.second < rhs.second;
+        }
+      };
+
+      std::set<Neighbor, NeighborCompare> neighbors;
+
+      for (VertexIteratorPair i = ::boost::vertices(tree); i.first != i.second; ++i.first)
+      {
+        ::rl::math::Real d = this->model->transformedDistance(chosen, *tree[*i.first].q);
+        neighbors.insert(Neighbor(*i.first, d));
       }
 
-      PcRrt::Neighbor PcRrt::nearest(const Tree& tree, const ::rl::math::Vector& chosen)
+      Neighbor bestNeighbor(nullptr, ::std::numeric_limits<::rl::math::Real>::max());
+
+      int tested = 0;
+      for (auto n = neighbors.begin(); n != neighbors.end() && tested < 5; ++n)
       {
-        struct NeighborCompare
-        {
-          bool operator()(const Neighbor& lhs, const Neighbor& rhs) const
-          {
-            return lhs.second < rhs.second;
-          }
-        };
+        const auto& vertex = (*n).first;
+        const auto& mean = tree[vertex].gState->configMean();
+        const auto& particles = tree[vertex].gState->getParticles();
+        const ::rl::math::Real distance = this->model->distance(mean, chosen);
 
-        std::set<Neighbor, NeighborCompare> neighbors;
-
-        for (VertexIteratorPair i = ::boost::vertices(tree); i.first != i.second; ++i.first)
+        std::vector<Particle> movedParticles;
+        for (int pIdx = 0; pIdx < particles.size(); ++pIdx)
         {
-          ::rl::math::Real d = this->model->transformedDistance(chosen, *tree[*i.first].q);
-          neighbors.insert(Neighbor(*i.first, d));
+          ::rl::math::Vector motionNoise(this->model->getDof());
+          this->model->sampleMotionError(motionNoise);
+
+          auto particle = particles[pIdx];
+          auto particleOffset = particle.config - mean;
+          auto shiftedChosen = chosen + particleOffset;
+
+          ::rl::math::Vector dest(this->model->getDof());
+          this->model->interpolateNoisy(particle.config, shiftedChosen, distance, motionNoise, dest);
+
+          Particle p(dest);
+          movedParticles.push_back(dest);
         }
 
-        Neighbor bestNeighbor(nullptr, ::std::numeric_limits<::rl::math::Real>::max());
-
-        int tested = 0;
-        for (auto n = neighbors.begin(); n != neighbors.end() && tested < 5; ++n)
+        GaussianState g(movedParticles);
+        ::rl::math::Real metric = g.configGaussian().eigenvalues().sum();
+        if (metric < bestNeighbor.second)
         {
-          const auto& vertex = (*n).first;
-          const auto& mean = tree[vertex].gState->configMean();
-          const auto& particles = tree[vertex].gState->getParticles();
-          const ::rl::math::Real distance = this->model->distance(mean, chosen);
-
-          std::vector<Particle> movedParticles;
-          for (int pIdx = 0; pIdx < particles.size(); ++pIdx)
-          {
-            ::rl::math::Vector motionNoise(this->model->getDof());
-            this->model->sampleMotionError(motionNoise);
-
-            auto particle = particles[pIdx];
-            auto particleOffset = particle.config - mean;
-            auto shiftedChosen = chosen + particleOffset;
-
-            ::rl::math::Vector dest(this->model->getDof());
-            this->model->interpolateNoisy(particle.config, shiftedChosen, distance, motionNoise, dest);
-
-            Particle p(dest);
-            movedParticles.push_back(dest);
-          }
-
-          GaussianState g(movedParticles);
-          ::rl::math::Real metric = g.configGaussian().eigenvalues().sum();
-          if (metric < bestNeighbor.second)
-          {
-            bestNeighbor.first = vertex;
-            bestNeighbor.second = metric;
-          }
-
-          tested++;
+          bestNeighbor.first = vertex;
+          bestNeighbor.second = metric;
         }
 
+        tested++;
+      }
 
-        return bestNeighbor;
+
+      return bestNeighbor;
     }
 
     bool PcRrt::solve()
@@ -161,7 +161,8 @@ namespace rl
         bool sampleResult = false;
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
         {
-         //sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles);
+         sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles);
+          //          sampleResult = this->sampleConnectParticles(n, *goal, this->nrParticles, false, particles);
         }
         else if (doGuardedMove)
         {
@@ -609,20 +610,23 @@ namespace rl
             if(!collMap.begin()->second.isSensor)
               return false;
 
-
-            if(!this->solidScene->getCollisionSurfaceNormal(initPoint,normal))
-              return false;
-
             if(collMap.size()>1)
             {
               std::cout<<"Connect move ends in a state with two collisions - this should not happen!"<<std::endl;
               return false;
             }
 
+
             std::string s1=collMap.begin()->first.first;
-
-
             std::string s2=collMap.begin()->first.second;
+
+            if(!this->solidScene->getCollisionSurfaceNormal(initPoint,collMap.begin()->second.commonPoint,s1,s2,normal))
+            {
+              this->viewer->drawLine(initPoint,collMap.begin()->second.commonPoint);
+              std::cout<<"failed to compute normal"<<std::endl;
+              return false;
+            }
+
 
             if (shape1 == "")
             {
@@ -747,11 +751,16 @@ namespace rl
           if(!collMap.begin()->second.isSensor)
             return false;
 
-
           rl::math::Vector3 normal;
-          if(!this->solidScene->getCollisionSurfaceNormal(initPoint,normal))
-            return false;
+          std::string s1=collMap.begin()->first.first;
+          std::string s2=collMap.begin()->first.second;
 
+          if(!this->solidScene->getCollisionSurfaceNormal(initPoint,collMap.begin()->second.commonPoint,s1,s2,normal))
+          {
+            this->viewer->drawLine(initPoint,collMap.begin()->second.commonPoint);
+            std::cout<<"failed to compute normal"<<std::endl;
+            return false;
+          }
 
           if(collMap.size()>1)
           {
@@ -759,8 +768,6 @@ namespace rl
             return false;
           }
 
-          std::string s1 = collMap.begin()->first.first;
-          std::string s2 = collMap.begin()->first.second;
 
           if (shape1 == "")
           {
@@ -801,7 +808,7 @@ namespace rl
       return dist;
     }
 
-    bool PcRrt::moveConfigOnSurface(const ::rl::math::Vector& config, const ::rl::math::Vector3& pointOnSurface, const ::rl::math::Vector3& normal, ::rl::math::Vector& out)
+    bool PcRrt::moveConfigOnSurface(const ::rl::math::Vector& config, const ::rl::math::Vector3& pointOnSurface, const ::rl::math::Vector3& normal, const std::pair<std::string, std::string>& collPair, ::rl::math::Vector& out)
     {
       double dist = std::numeric_limits<double>::infinity();
       out = config;
@@ -846,8 +853,11 @@ namespace rl
       //Move a bit into the surface until we are colliding
       steps = 0;
 
-      bool collision = this->model->isColliding();
-      while(!collision && steps++<10)
+      this->model->isColliding();
+      rl::sg::solid::Scene::CollisionMap colls = this->getAllCollidingShapes();
+      bool collision = (colls.find(collPair) != colls.end());
+
+      while(!collision && steps++ < 10)
       {
         rl::math::Vector6 tdot;
         tdot.setZero();
@@ -862,7 +872,10 @@ namespace rl
         this->model->updateFrames();
         this->model->updateJacobian();
         this->model->updateJacobianInverse();
-        collision = this->model->isColliding();
+        this->model->isColliding();
+        colls = this->getAllCollidingShapes();
+        collision = (colls.find(collPair) != colls.end());
+
       }
 
       return collision && fabs(dist < 0.01)  ;
@@ -900,19 +913,16 @@ namespace rl
       this->model->setPosition(oldParticle.config);
       this->model->updateFrames();
       ::rl::math::Transform ee = this->model->forwardPosition();
+      if(fabs(ee(0,0))>2)
+        std::cout<<"warn"<<std::endl;
       ::rl::math::Transform cp = ee;
       cp.translation() = slidingContact.point - ee.translation();
-      ::rl::math::Transform cp_neg = ee;
-      cp_neg.translation() = ee.translation() -slidingContact.point;
       this->model->updateTool(cp);
-      this->model->updateFrames();
-      this->model->updateJacobian();
 
       ::rl::math::Vector3 slidingNormal = slidingContact.normal_env;
       //this->drawSurfaceNormal(slidingContact.point,slidingContact.normal_env);
 
-      this->model->setPosition(chosen);
-      this->model->updateFrames();
+
       //The pose of a random sample
       //::rl::math::Vector3 chosenForwardPos = this->model->forwardPosition().translation();
       ::rl::math::Vector randomDir(3);
@@ -946,12 +956,17 @@ namespace rl
           std::cout<<"no contact after projection";
         }
 
+        ::rl::math::Transform fp;
         if(pIdx == 0)
         {
-          ::rl::math::Transform fp = this->model->forwardPosition();
+          fp = this->model->forwardPosition();
           goal = fp;
           goal.translation() = chosen_proj;
           ::rl::math::transform::toDelta(fp, goal, tdot);
+
+          if(this->model->getDof() <= 2)
+            tdot(2) = 0;
+
           tdot.normalize();
         }
 
@@ -981,14 +996,14 @@ namespace rl
           ::rl::math::Vector newStep(this->model->getDof());
           this->model->interpolateNoisy(nextStep,nextStep+qdot,1,motionNoise,newStep);
 
-          if(!moveConfigOnSurface(newStep, slidingContact.point, slidingContact.normal_env, nextStep))
+          if(!moveConfigOnSurface(newStep, slidingContact.point, slidingContact.normal_env, slidingPair, nextStep))
           {
             std::cout<<"Could not project cfg on surface!!"<<std::endl;
-            this->model->updateTool(cp_neg);
+            this->model->resetTool();
             return false;
           }
 
-          this->viewer->drawConfiguration(nextStep);
+          //this->viewer->drawConfiguration(nextStep);
 
           steps++;
 
@@ -1016,10 +1031,12 @@ namespace rl
         if (steps < 3)
         {
           // we did not move very far, this is considered failure
-          this->model->updateTool(cp_neg);
+          this->model->resetTool();
           return false;
         }
 
+        this->model->setPosition(nextStep);
+        this->model->updateFrames();
         this->model->isColliding();
         allColls = this->getAllCollidingShapes();
 
@@ -1032,7 +1049,7 @@ namespace rl
           if(!this->isEqualCollisionState(allColls, finalCollisions))
           {
             //inconsistent (over particles) collision state at end of slide
-            this->model->updateTool(cp_neg);
+            this->model->resetTool();
             return false;
           }
         }
@@ -1050,7 +1067,11 @@ namespace rl
           {
             //Body shape must be sensor
             if(!it->second.isSensor)
+            {
+              this->model->resetTool();
               return false;
+
+            }
 
 
             std::string c1 = it->first.first;
@@ -1063,9 +1084,14 @@ namespace rl
             }
             else
             {
-              if(!this->solidScene->getCollisionSurfaceNormal(it->second.commonPoint+slidingNormal*3.0*this->delta,contactNormal))
+
+              rl::math::Vector3 source = slidingContact.point+slidingNormal*0.1;
+              rl::math::Vector3 target = it->second.commonPoint;
+
+              if(!this->solidScene->getCollisionSurfaceNormal(source, target, c1, c2 , contactNormal))
               {
-                this->model->updateTool(cp_neg);
+                this->viewer->drawLine(source,target);
+                this->model->resetTool();
                 std::cout<<"failed to compute normal"<<std::endl;
                 return false;
               }
@@ -1078,8 +1104,7 @@ namespace rl
         }
         pIdx++;
       }
-
-      this->model->updateTool(cp_neg);
+      this->model->resetTool();
       return true;
     }
 
