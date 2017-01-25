@@ -548,6 +548,9 @@ namespace rl
 
           this->model->interpolateNoisy(init, target,  step / distance, motionNoise, nextStep);
 
+          if(!this->model->isValid(nextStep))
+            return false;
+
           this->model->setPosition(nextStep);
           this->model->updateFrames();
 
@@ -705,7 +708,8 @@ namespace rl
 
         // move until collision
         int steps = 0;
-        bool collision = false;
+
+        bool collision;
         bool inInitialCollision = true;
 
         ::rl::sg::solid::Scene::CollisionMap allColls, initColls;
@@ -715,6 +719,8 @@ namespace rl
         do
         {
           this->model->interpolateNoisy(init, target,  step / distance, motionNoise, nextStep);
+          if(!this->model->isValid(nextStep))
+            return false;
 
           this->model->setPosition(nextStep);
           this->model->updateFrames();
@@ -810,6 +816,9 @@ namespace rl
 
     bool PcRrt::moveConfigOnSurface(const ::rl::math::Vector& config, const ::rl::math::Vector3& pointOnSurface, const ::rl::math::Vector3& normal, const std::pair<std::string, std::string>& collPair, ::rl::math::Vector& out)
     {
+
+      //Step 1: move end-effector on the line given by point an normal
+
       double dist = std::numeric_limits<double>::infinity();
       out = config;
 
@@ -824,7 +833,7 @@ namespace rl
       dist = projectOnSurface(eeT.translation(),pointOnSurface, normal, goaltransl);
 
       int steps = 0;
-      while(fabs(dist) > 0.01 && steps++<3)
+      while(fabs(dist) > 0.01 && steps++<30)
       {
         goalT.translation() = goaltransl;
 
@@ -850,12 +859,18 @@ namespace rl
         dist = projectOnSurface(eeT.translation(),pointOnSurface, normal, goaltransl);
       }
 
-      //Move a bit into the surface until we are colliding
+      if(fabs(dist)>0.01)
+        return false;
+
+      //Step 2: Move end-effector towards surface until colliding
       steps = 0;
 
       this->model->isColliding();
       rl::sg::solid::Scene::CollisionMap colls = this->getAllCollidingShapes();
       bool collision = (colls.find(collPair) != colls.end());
+
+      //Store the configuration before projecting onto collision surface
+      ::rl::math::Vector preProjection = out;
 
       while(!collision && steps++ < 10)
       {
@@ -878,7 +893,16 @@ namespace rl
 
       }
 
-      return collision && fabs(dist < 0.01)  ;
+
+
+      //There is no contact with the sliding surface - return the configuration from step 1.
+      if(!collision)
+      {
+        out = preProjection;
+        return false;
+      }
+
+      return true;
     }
 
     /**
@@ -903,6 +927,11 @@ namespace rl
           slidingIdx = chooseSurfaceDistr(*this->gen);
       }
 
+      //The pose of a random sample
+      this->model->setPosition(chosen);
+      this->model->updateFrames();
+      ::rl::math::Vector3 chosenForwardPos = this->model->forwardPosition().translation();
+
 
       Contact slidingContact = oldParticle.contacts[slidingIdx];
       std::pair<std::string, std::string> slidingPair;
@@ -923,10 +952,11 @@ namespace rl
       //this->drawSurfaceNormal(slidingContact.point,slidingContact.normal_env);
 
 
-      //The pose of a random sample
-      //::rl::math::Vector3 chosenForwardPos = this->model->forwardPosition().translation();
+      //Option a) random direction
       ::rl::math::Vector randomDir(3);
       this->sampleDirection(randomDir);
+
+      //TODO: Also do the Connect-Slide towards a random pose projected on the surface
 
       //Project it on the sliding surface
       ::rl::math::Vector3 chosen_proj;
@@ -957,7 +987,7 @@ namespace rl
         }
 
         ::rl::math::Transform fp;
-        if(pIdx == 0)
+        if(pIdx == 0) //Compute desired EE velocity twist tdot
         {
           fp = this->model->forwardPosition();
           goal = fp;
@@ -985,6 +1015,11 @@ namespace rl
           this->model->updateJacobian();
           this->model->updateJacobianInverse();
 
+          if(this->model->getDof() > 3 && this->model->getManipulabilityMeasure()  < 1.0e-3f)
+          {
+            std::cout<<this->model->getManipulabilityMeasure() <<std::endl;
+            break;
+          }
 
           ::rl::math::Vector qdot(this->model->getDof());
           qdot.setZero();
@@ -999,11 +1034,13 @@ namespace rl
           if(!moveConfigOnSurface(newStep, slidingContact.point, slidingContact.normal_env, slidingPair, nextStep))
           {
             std::cout<<"Could not project cfg on surface!!"<<std::endl;
-            this->model->resetTool();
-            return false;
+            break;
           }
 
-          //this->viewer->drawConfiguration(nextStep);
+          if(!this->model->isValid(nextStep))
+            return false;
+
+          this->viewer->drawConfiguration(nextStep);
 
           steps++;
 
@@ -1027,13 +1064,13 @@ namespace rl
         }
 
 
-        // some magic number
-        if (steps < 3)
-        {
-          // we did not move very far, this is considered failure
-          this->model->resetTool();
-          return false;
-        }
+//        // some magic number
+//        if (steps < 3)
+//        {
+//          // we did not move very far, this is considered failure
+//          this->model->resetTool();
+//          return false;
+//        }
 
         this->model->setPosition(nextStep);
         this->model->updateFrames();
