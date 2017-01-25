@@ -105,7 +105,7 @@ DEF room2 Transform {
 			]
 		}
 		DEF box3 Transform {
-			translation 0.75 0.75 -0.2
+			translation 0.75 0.75 0.0
 			children [
 				Shape {
 					appearance Appearance {
