@@ -161,7 +161,7 @@ namespace rl
         bool sampleResult = false;
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
         {
-         sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles);
+          sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles);
           //          sampleResult = this->sampleConnectParticles(n, *goal, this->nrParticles, false, particles);
         }
         else if (doGuardedMove)
@@ -183,13 +183,15 @@ namespace rl
           Gaussian g = gaussianState->configGaussian();
           //this->drawEigenvectors(g, 1.0);
 
+//          if(particles.begin()->contacts.size()>0)
+//            this->drawSurfaceNormal(particles.begin()->contacts.begin()->point,particles.begin()->contacts.begin()->normal_env,0.1);
+
+
           // add a new vertex and edge
           VectorPtr mean = ::boost::make_shared<::rl::math::Vector>(g.mean);
-          this->viewer->drawConfiguration(g.mean);
+          //this->viewer->drawConfiguration(g.mean);
           Vertex newVertex = this->addVertex(this->tree[0], mean);
-          //this->model->setPosition(*mean);
-          //::boost::shared_ptr<::rl::math::Transform> tptr = ::boost::make_shared<::rl::math::Transform>(this->model->forwardPosition());
-          //this->tree[0][newVertex].t = tptr;
+
           this->tree[0][newVertex].gState = gaussianState;
 
           this->addEdge(chosenVertex, newVertex, this->tree[0]);
@@ -855,6 +857,9 @@ namespace rl
         this->model->updateJacobian();
         this->model->updateJacobianInverse();
 
+
+        this->viewer->drawConfiguration(out);
+
         eeT = this->model->forwardPosition();
         dist = projectOnSurface(eeT.translation(),pointOnSurface, normal, goaltransl);
       }
@@ -936,35 +941,28 @@ namespace rl
       Contact slidingContact = oldParticle.contacts[slidingIdx];
       std::pair<std::string, std::string> slidingPair;
       slidingPair.first  = slidingContact.shape_robot;
-      slidingPair.second = slidingContact.shape_env;
+      slidingPair.second = slidingContact.shape_env;     
+      ::rl::math::Vector3 slidingNormal = slidingContact.normal_env;
 
-      //Transform EE frame to contact point
+      // We move the EE frame to the contact point. This way the Jacobian
+      // can be used to project the contact point back on the sliding surface.
+      // Caution: whenever this function exits, model->resetTool must be called!
       this->model->setPosition(oldParticle.config);
       this->model->updateFrames();
-      ::rl::math::Transform ee = this->model->forwardPosition();
-      if(fabs(ee(0,0))>2)
-        std::cout<<"warn"<<std::endl;
-      ::rl::math::Transform cp = ee;
-      cp.translation() = slidingContact.point - ee.translation();
-      this->model->updateTool(cp);
+      //ee in world frame
+      ::rl::math::Transform ee_world = this->model->forwardPosition();
+      //contact frame - orientation is same as ee
+      ::rl::math::Transform cp_world = ee_world;
+      //Translation ist shifted to contact point
+      cp_world.translation() = slidingContact.point;
+      //CP in EE frame
+      ::rl::math::Transform cp_ee = ee_world.inverse()*cp_world;
+      this->model->updateTool(cp_ee);
 
-      ::rl::math::Vector3 slidingNormal = slidingContact.normal_env;
-      //this->drawSurfaceNormal(slidingContact.point,slidingContact.normal_env);
-
-
-      //Option a) random direction
-      ::rl::math::Vector randomDir(3);
-      this->sampleDirection(randomDir);
-
-      //TODO: Also do the Connect-Slide towards a random pose projected on the surface
-
-      //Project it on the sliding surface
+      //Now take the chosen  expansion direction and project it on the sliding surface
       ::rl::math::Vector3 chosen_proj;
-      double distToSurface = projectOnSurface(slidingContact.point+randomDir, slidingContact.point, slidingNormal, chosen_proj);
+      double distToSurface = projectOnSurface(chosenForwardPos, slidingContact.point, slidingNormal, chosen_proj);
 
-
-      //This is the target direction of our slide
-      ::rl::math::Transform goal;
 
 
       rl::sg::solid::Scene::CollisionMap allColls, finalCollisions;
@@ -979,21 +977,23 @@ namespace rl
         ::rl::math::Vector init(this->model->getDof());
         this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init, pIdx);
 
-        this->model->setPosition(init);
-        this->model->updateFrames();
-        if(!this->model->isColliding())
-        {
-          std::cout<<"no contact after projection";
-        }
-
         ::rl::math::Transform fp;
         if(pIdx == 0) //Compute desired EE velocity twist tdot
         {
-          fp = this->model->forwardPosition();
-          goal = fp;
-          goal.translation() = chosen_proj;
-          ::rl::math::transform::toDelta(fp, goal, tdot);
 
+          this->model->setPosition(init);
+          this->model->updateFrames();
+
+          ee_world = this->model->forwardPosition();
+
+          //This is the target pose of our slide
+          ::rl::math::Transform goal_world = ee_world;
+          goal_world.translation() = chosen_proj;
+
+          //Compute a 6d Velocity twist for the task-space controller
+          ::rl::math::transform::toDelta(ee_world, goal_world, tdot);
+
+          //2D models do not move in z-direction (this is a convention)
           if(this->model->getDof() <= 2)
             tdot(2) = 0;
 
@@ -1003,7 +1003,6 @@ namespace rl
         //Sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
         this->model->sampleMotionError(motionNoise);
-
 
         int steps = 0;
         ::rl::math::Vector nextStep = init;
@@ -1039,8 +1038,6 @@ namespace rl
 
           if(!this->model->isValid(nextStep))
             return false;
-
-          this->viewer->drawConfiguration(nextStep);
 
           steps++;
 
