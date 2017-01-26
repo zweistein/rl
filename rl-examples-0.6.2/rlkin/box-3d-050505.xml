@@ -77,7 +77,7 @@
 			<ignore idref="link1"/>
 			<ignore idref="link3"/>
 		</link>
-	    <revolute id="joint2">
+	    <prismatic id="joint2">
 			<frame>
 				<a idref="link2"/>
 				<b idref="link3"/>
@@ -88,10 +88,9 @@
 				<a>0</a>
 				<alpha>-90</alpha>
 			</dh>
-			<max>180</max>
-			<min>-180</min>
-			<wraparound />
-		</revolute>
+			<max>0.5</max>
+			<min>-0.5</min>
+		</prismatic>
 		<link id="link3">
 			<ignore idref="link0"/>
 			<ignore idref="link1"/>

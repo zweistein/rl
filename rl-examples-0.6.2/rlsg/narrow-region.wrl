@@ -3,12 +3,26 @@
 DEF room2 Transform {
   children [
     DEF floor Transform {
-      translation 0 0 -5e-2
+      translation 0 0 0.05
       children 
         Shape {
           appearance Appearance {
             material Material {
-              transparency 0.500000
+              transparency 0.8
+            }
+          }
+          geometry Box {
+            size 5.199994 5.199994 0.100000
+          }
+        }
+    }
+    DEF ceiling Transform {
+      translation 0 0 1
+      children 
+        Shape {
+          appearance Appearance {
+            material Material {
+              transparency 0.8
             }
           }
           geometry Box {
