@@ -9,7 +9,7 @@ Transform {
 			]
 		}
 		DEF wall Inline {
-			url "wall-rbo.wrl"
+			url "wall-rbo2.wrl"
 		}
 	]
 }

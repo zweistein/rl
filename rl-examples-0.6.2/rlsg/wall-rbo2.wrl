@@ -2,13 +2,12 @@
 
 Transform
   {
-  translation 0.84999997 0 -0.69999998
+  translation 0.84999996 0 -0.69999998
   children 
     [
     Transform
       {
-      translation 0 0 0.70612347
-      scale 1 1 1.92855000
+      translation 0 0 0.50000000
       children 
 	Shape
 	  {
@@ -16,18 +15,18 @@ Transform
 	    {
 	    material Material
 	      {
-	      diffuseColor 1 1 1
+	      diffuseColor 1 0 1
 	      }
 	    }
 	  geometry Box
 	    {
-	    size 0.27900001 0.63999998 1.50000000
+	    size 5.00000007e-2 0.69999998 1
 	    }
 	  }
       }
     Transform
       {
-      translation -0.24788272 0.22186490 1.57242107
+      translation 0.12500000 0 0.75000000
       children 
 	Shape
 	  {
@@ -35,18 +34,18 @@ Transform
 	    {
 	    material Material
 	      {
-	      diffuseColor 1 1 1
+	      diffuseColor 1 0 0
 	      }
 	    }
 	  geometry Box
 	    {
-	    size 0.43000000 0.20999900 0.20999999
+	    size 0.20000000 0.69999998 1.50000000
 	    }
 	  }
       }
     Transform
       {
-      translation -0.24329662 -0.22730323 1.57746493
+      translation 0 0 1.35000002
       children 
 	Shape
 	  {
@@ -54,54 +53,109 @@ Transform
 	    {
 	    material Material
 	      {
-	      diffuseColor 1 1 1
+	      diffuseColor 1 0 1
 	      }
 	    }
 	  geometry Box
 	    {
-	    size 0.43000000 0.18999899 0.20999999
+	    size 5.00000007e-2 0.69999998 0.30000001
 	    }
 	  }
       }
     Transform
       {
-      translation -0.25046253 0 1.76958942
+      translation 0 0.22499999 1.10000002
       children 
-	[
 	Shape
 	  {
 	  appearance Appearance
 	    {
 	    material Material
 	      {
-	      diffuseColor 1 1 1
+	      diffuseColor 1 0 1
 	      }
 	    }
 	  geometry Box
 	    {
-	    size 0.43000000 0.63999998 0.20999999
+	    size 5.00000007e-2 0.25000000 0.20000000
 	    }
 	  }
-	Transform
+      }
+    Transform
+      {
+      translation 0 -0.22499899 1.10000002
+      children 
+	Shape
 	  {
-	  translation 4.50372695e-3 5.47826290e-3 -0.38282537
-	  children 
-	    Shape
+	  appearance Appearance
+	    {
+	    material Material
 	      {
-	      appearance Appearance
-		{
-		material Material
-		  {
-		  diffuseColor 1 1 1
-		  }
-		}
-	      geometry Box
-		{
-		size 0.43000000 0.63999998 0.20999999
-		}
+	      diffuseColor 1 0 1
 	      }
+	    }
+	  geometry Box
+	    {
+	    size 5.00000007e-2 0.25000000 0.20000000
+	    }
 	  }
-	]
+      }
+    Transform
+      {
+      translation -7.50000029e-2 0 1.45000004
+      children 
+	Shape
+	  {
+	  appearance Appearance
+	    {
+	    material Material
+	      {
+	      diffuseColor 1 1 0
+	      }
+	    }
+	  geometry Box
+	    {
+	    size 0.10000000 0.50000000 0.30000001
+	    }
+	  }
+      }
+    Transform
+      {
+      translation -7.50000029e-2 -5.00000007e-2 0.85000002
+      children 
+	Shape
+	  {
+	  appearance Appearance
+	    {
+	    material Material
+	      {
+	      diffuseColor 0 1 1
+	      }
+	    }
+	  geometry Box
+	    {
+	    size 0.10000000 0.30000001 0.20000000
+	    }
+	  }
+      }
+    Transform
+      {
+      translation -0.10000000 0.30000001 0.69999998
+      children 
+	Shape
+	  {
+	  appearance Appearance
+	    {
+	    material Material
+	      {
+	      diffuseColor 0 1 0
+	      }
+	    }
+	  geometry Box
+	    {
+	    size 0.15000000 0.40000000 0.50000000
+	    }
+	  }
       }
     ]
   }

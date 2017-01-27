@@ -4,11 +4,11 @@
 		<duration>1200</duration>
 		<goal>
 			<q unit="deg">0</q>
-			<q unit="deg">-3</q>
+			<q unit="deg">49</q>
 			<q unit="deg">0</q>
-			<q unit="deg">104</q>
+			<q unit="deg">87</q>
 			<q unit="deg">0</q>
-			<q unit="deg">0</q>
+			<q unit="deg">-35</q>
 			<q unit="deg">0</q>
 		</goal>
 		<model>
@@ -55,7 +55,7 @@
 			<model>
 				<kinematics href="../rlkin/barrett-wam-wrist.xml"/>
 				<model>0</model>
-	<scene href="../rlsg/barrett-wam-wrist_wall.convex.xml"/>
+	<scene href="../rlsg/barrett-wam-wrist_wall.xml"/>
 			</model>
 			<size>
 				<height>768</height>
@@ -66,21 +66,21 @@
 		<delta unit="deg">0.5</delta>
          <nrParticles>20</nrParticles>
              <initialError>
+              <q>0.0</q>
+              <q>0.0</q>
+              <q>0.0</q>
+              <q>0.0</q>
+              <q>0.0</q>
+              <q>0.0</q>
+              <q>0.0</q>
+            </initialError>
+            <motionError>
               <q>0.05</q>
               <q>0.05</q>
               <q>0.05</q>
               <q>0.05</q>
               <q>0.05</q>
               <q>0.05</q>
-              <q>0.0</q>
-            </initialError>
-            <motionError>
-              <q>0.0</q>
-              <q>0.0</q>
-              <q>0.0</q>
-              <q>0.0</q>
-              <q>0.0</q>
-              <q>0.0</q>
               <q>0.0</q>
             </motionError>
             <goalEpsilon>0.05</goalEpsilon>

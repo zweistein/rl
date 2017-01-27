@@ -32,7 +32,7 @@ namespace rl
     {
       // comment in for random seed
       // this->gen = ::boost::make_shared<boost::random::mt19937>(std::time(0));
-      this->gen = ::boost::make_shared<boost::random::mt19937>(43);
+      this->gen = ::boost::make_shared<boost::random::mt19937>(44);
     }
 
     //Needed for Guarded moves
@@ -44,7 +44,7 @@ namespace rl
       for(int i=0; i<dim; i++)
       {
           rd[i] = distr(*this->gen);
-          rdsum+=rd[i]*rd[i];
+          rdsum += rd[i]*rd[i];
       }
       rdsum = sqrt(rdsum);
       for(int i=0; i<dim; i++)
@@ -99,7 +99,7 @@ namespace rl
         }
 
         GaussianState g(movedParticles);
-        ::rl::math::Real metric = g.configGaussian().eigenvalues().sum();
+        ::rl::math::Real metric =  g.configGaussian().eigenvalues().sum();
         if (metric < bestNeighbor.second)
         {
           bestNeighbor.first = vertex;
@@ -142,12 +142,25 @@ namespace rl
       timer.start();
       timer.stop();
 
+      this->model->setPosition(*this->goal);
+      this->model->updateFrames();
+      ::rl::math::Transform goalT = this->model->forwardPosition();
+
       while (timer.elapsed() < this->duration)
       {
         // vector for Voronoi vertex selection
         ::rl::math::Vector chosenSample(this->model->getDof());
+
+
+        boost::random::uniform_int_distribution<> goalDistr(0, 100);
+        if(goalDistr(*this->gen) < 10)
+          chosenSample = *this->goal;
+
         // choose new vertex using Voronoi bias
-        this->choose(chosenSample);
+        else
+          this->choose(chosenSample);
+
+
         Neighbor n = this->nearest(this->tree[0], chosenSample);
         Vertex chosenVertex = n.first;
 
@@ -161,7 +174,7 @@ namespace rl
         bool sampleResult = false;
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
         {
-          sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles);
+          sampleResult = this->sampleSlidingParticles(false, n, chosenSample, this->nrParticles, particles);
           //          sampleResult = this->sampleConnectParticles(n, *goal, this->nrParticles, false, particles);
         }
         else if (doGuardedMove)
@@ -212,9 +225,18 @@ namespace rl
             if (this->sampleConnectParticles(nearest, *this->goal, this->nrParticles, true, goalParticles))
             {
               ::boost::shared_ptr<GaussianState> goalState = ::boost::make_shared<GaussianState>(goalParticles);
-              ::rl::math::Real error = goalState->configGaussian().eigenvalues().maxCoeff();
-              std::cout << "reached goal with error: " << error << " (max allowed: " << this->goalEpsilon << ")" << std::endl;
-              if (error < this->goalEpsilon)
+
+              ::rl::math::Real maxError = 0;
+              for(int i=0; i<goalParticles.size(); i++)
+              {
+                this->model->setPosition(goalParticles[i].config);
+                this->model->updateFrames();
+                maxError = std::max(maxError,::rl::math::transform::distance(goalT, this->model->forwardPosition(), 0.0));
+              }
+
+              std::cout << "reached goal with error: " << maxError << " (max allowed: " << this->goalEpsilon << ")" << std::endl;
+
+              if (maxError < this->goalEpsilon)
               {
                 // visualize goal connect step
                 this->drawParticles(goalParticles);
@@ -627,7 +649,7 @@ namespace rl
 
             if(!this->solidScene->getCollisionSurfaceNormal(initPoint,collMap.begin()->second.commonPoint,s1,s2,normal))
             {
-              this->viewer->drawLine(initPoint,collMap.begin()->second.commonPoint);
+              //this->viewer->drawLine(initPoint,collMap.begin()->second.commonPoint);
               std::cout<<"failed to compute normal"<<std::endl;
               return false;
             }
@@ -765,7 +787,7 @@ namespace rl
 
           if(!this->solidScene->getCollisionSurfaceNormal(initPoint,collMap.begin()->second.commonPoint,s1,s2,normal))
           {
-            this->viewer->drawLine(initPoint,collMap.begin()->second.commonPoint);
+            //this->viewer->drawLine(initPoint,collMap.begin()->second.commonPoint);
             std::cout<<"failed to compute normal"<<std::endl;
             return false;
           }
@@ -857,9 +879,6 @@ namespace rl
         this->model->updateJacobian();
         this->model->updateJacobianInverse();
 
-
-        this->viewer->drawConfiguration(out);
-
         eeT = this->model->forwardPosition();
         dist = projectOnSurface(eeT.translation(),pointOnSurface, normal, goaltransl);
       }
@@ -913,7 +932,7 @@ namespace rl
     /**
       Samples a set of particles for a sliding move along a surface.
     */
-    bool PcRrt::sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::std::vector<Particle>& particles)
+    bool PcRrt::sampleSlidingParticles(bool guardedMove, const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::std::vector<Particle>& particles)
     {
       if (!this->tree[0][nearest.first].gState->isInCollision())
       {
@@ -977,70 +996,121 @@ namespace rl
         ::rl::math::Vector init(this->model->getDof());
         this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init, pIdx);
 
-        ::rl::math::Transform fp;
-        if(pIdx == 0) //Compute desired EE velocity twist tdot
-        {
+//        if(pIdx == 0) //Compute desired EE velocity twist tdot
+//        {
 
-          this->model->setPosition(init);
-          this->model->updateFrames();
+//          this->model->setPosition(init);
+//          this->model->updateFrames();
 
-          ee_world = this->model->forwardPosition();
+//          ee_world = this->model->forwardPosition();
 
-          //This is the target pose of our slide
-          ::rl::math::Transform goal_world = ee_world;
-          goal_world.translation() = chosen_proj;
+//          //This is the target pose of our slide
+//          ::rl::math::Transform goal_world = ee_world;
+//          goal_world.translation() = chosen_proj;
 
-          //Compute a 6d Velocity twist for the task-space controller
-          ::rl::math::transform::toDelta(ee_world, goal_world, tdot);
+//          //Compute a 6d Velocity twist for the task-space controller
+//          ::rl::math::transform::toDelta(ee_world, goal_world, tdot);
 
-          //2D models do not move in z-direction (this is a convention)
-          if(this->model->getDof() <= 2)
-            tdot(2) = 0;
+//          //2D models do not move in z-direction (this is a convention)
+//          if(this->model->getDof() <= 2)
+//            tdot(2) = 0;
 
-          tdot.normalize();
-        }
+//          tdot.normalize();
+//        }
 
         //Sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
         this->model->sampleMotionError(motionNoise);
 
         int steps = 0;
-        ::rl::math::Vector nextStep = init;
 
-        while (true)
+        //This is where the particle actually is
+        ::rl::math::Vector nextStepReal = init;
+        //This is where the particle thinks it is
+        ::rl::math::Vector nextStepVirtual = this->tree[0][nearest.first].gState->configMean();
+
+        bool reached = false;
+
+        while (!reached)
         {
-          this->model->setPosition(nextStep);
+          this->model->setPosition(nextStepVirtual);
           this->model->updateFrames();
           this->model->updateJacobian();
           this->model->updateJacobianInverse();
 
-          if(this->model->getDof() > 3 && this->model->getManipulabilityMeasure()  < 1.0e-3f)
+          if(!guardedMove || steps == 0)
           {
-            std::cout<<this->model->getManipulabilityMeasure() <<std::endl;
-            break;
+            ee_world = this->model->forwardPosition();
+
+            //This is the target pose of our slide
+            ::rl::math::Transform goal_world = ee_world;
+            goal_world.translation() = chosen_proj;
+
+            //Compute a 6d Velocity twist for the task-space controller
+            ::rl::math::transform::toDelta(ee_world, goal_world, tdot);
+
+            //2D models do not move in z-direction (this is a convention)
+            if(this->model->getDof() <= 2)
+              tdot(2) = 0;
           }
 
           ::rl::math::Vector qdot(this->model->getDof());
           qdot.setZero();
           this->model->inverseVelocity(tdot, qdot);
 
-          qdot.normalize();
-          qdot *= this->delta;
+          if(qdot.norm() < this->delta)
+            reached = true;
+          else
+          {
+            qdot.normalize();
+            qdot *= this->delta;
+          }
+
 
           ::rl::math::Vector newStep(this->model->getDof());
-          this->model->interpolateNoisy(nextStep,nextStep+qdot,1,motionNoise,newStep);
+          //The robot thinks it is exactly following the line
+          nextStepVirtual = nextStepVirtual+qdot;
 
-          if(!moveConfigOnSurface(newStep, slidingContact.point, slidingContact.normal_env, slidingPair, nextStep))
+          //In reality there is noise
+          this->model->interpolateNoisy(nextStepReal,nextStepReal+qdot,1,motionNoise,newStep);
+          //Project back on sliding surface
+          if(!moveConfigOnSurface(newStep, slidingContact.point, slidingContact.normal_env, slidingPair, nextStepReal))
           {
             std::cout<<"Could not project cfg on surface!!"<<std::endl;
             break;
           }
 
-          if(!this->model->isValid(nextStep))
+          //Check for collisions and if model is valid
+          if(!this->model->isValid(nextStepReal))
+          {
+            this->model->resetTool();
             return false;
+          }
+
+          //this->viewer->drawConfiguration(nextStepReal);
+
 
           steps++;
 
+          if(steps > 6.2/this->delta)
+          {
+            this->model->resetTool();
+            return false;
+          }
+
+          this->model->setPosition(nextStepReal);
+          this->model->updateFrames();
+          this->model->updateJacobian();
+          this->model->updateJacobianInverse();
+
+          //check for singularity
+          if(this->model->getDof() > 3 && this->model->getManipulabilityMeasure()  < 1.0e-3f)
+          {
+            this->model->resetTool();
+            return false;
+          }
+
+          //Check for collision
           this->model->isColliding();
           allColls = this->getAllCollidingShapes();
 
@@ -1069,7 +1139,7 @@ namespace rl
 //          return false;
 //        }
 
-        this->model->setPosition(nextStep);
+        this->model->setPosition(nextStepReal);
         this->model->updateFrames();
         this->model->isColliding();
         allColls = this->getAllCollidingShapes();
@@ -1091,7 +1161,7 @@ namespace rl
         // valid particle, store it
         if(allColls.size() == 0)
         {
-          Particle p(nextStep);
+          Particle p(nextStepReal);
           particles.push_back(p);
         }
         else
@@ -1124,7 +1194,7 @@ namespace rl
 
               if(!this->solidScene->getCollisionSurfaceNormal(source, target, c1, c2 , contactNormal))
               {
-                this->viewer->drawLine(source,target);
+                //this->viewer->drawLine(source,target);
                 this->model->resetTool();
                 std::cout<<"failed to compute normal"<<std::endl;
                 return false;
@@ -1133,7 +1203,7 @@ namespace rl
 
             contacts.push_back(Contact(it->second.commonPoint,contactNormal,c1,c2));
           }
-          Particle p(nextStep, contacts);
+          Particle p(nextStepReal, contacts);
           particles.push_back(p);
         }
         pIdx++;

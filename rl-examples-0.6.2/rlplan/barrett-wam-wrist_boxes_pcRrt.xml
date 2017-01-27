@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rlplan xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="rlplan.xsd">
 	<pcRrt>
-		<duration>1200</duration>
+		<duration>120000</duration>
 		<goal>
 			<q unit="deg">50</q>
 			<q unit="deg">6</q>
@@ -55,7 +55,7 @@
 			<model>
 				<kinematics href="../rlkin/barrett-wam-wrist.xml"/>
 				<model>0</model>
-				<scene href="../rlsg/barrett-wam-wrist_boxes.convex.xml"/>
+				<scene href="../rlsg/barrett-wam-wrist_boxes.xml"/>
 			</model>
 			<size>
 				<height>768</height>
@@ -66,24 +66,24 @@
 		<delta unit="deg">0.5</delta>
          <nrParticles>30</nrParticles>
              <initialError>
-              <q>0.25</q>
-              <q>0.25</q>
-              <q>0.25</q>
-              <q>0.25</q>
-              <q>0.25</q>
-              <q>0.25</q>
+              <q>0.05</q>
+              <q>0.05</q>
+              <q>0.05</q>
+              <q>0.05</q>
+              <q>0.05</q>
+              <q>0.05</q>
               <q>0.0</q>
             </initialError>
             <motionError>
-              <q>0.0</q>
-              <q>0.0</q>
-              <q>0.0</q>
-              <q>0.0</q>
-              <q>0.0</q>
-              <q>0.0</q>
+              <q>0.1</q>
+              <q>0.1</q>
+              <q>0.1</q>
+              <q>0.1</q>
+              <q>0.1</q>
+              <q>0.1</q>
               <q>0.0</q>
             </motionError>
-            <goalEpsilon>0.0041</goalEpsilon>
+            <goalEpsilon>0.1</goalEpsilon>
             <!-- <useMotionError/> -->
             <uniformSampler>
               <seed>1</seed>
