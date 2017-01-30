@@ -126,6 +126,31 @@ namespace rl
 			}
 
 			bool
+			Scene::getCollisionPoint(::rl::math::Vector3& point)
+			{
+				Shape* shape1 = static_cast< Shape* >(this->lastCollidingShape1);
+				Shape* shape2 = static_cast< Shape* >(this->lastCollidingShape2);
+
+				DT_Vector3 p;
+				DT_Bool success = DT_GetCommonPoint(
+					shape1->complex ? shape1->object : shape2->object,
+					shape1->complex ? shape2->object : shape1->object,
+					p
+				);
+
+				if (DT_TRUE == success)
+				{
+					point[0] = static_cast< DT_Scalar >(p[0]);
+	        point[1] = static_cast< DT_Scalar >(p[1]);
+	        point[2] = static_cast< DT_Scalar >(p[2]);
+
+	        return true;
+				}
+
+				return false;
+			}
+
+			bool
       Scene::getCollisionSurfaceNormal(const ::rl::math::Vector3& from, ::rl::math::Vector3& normalVector)
       {
         DT_Vector3 start;
@@ -158,8 +183,7 @@ namespace rl
               obstacleShape->object,
               start,
               collisionPoint,
-              // std::numeric_limits< DT_Scalar >::max(),
-              10,
+              std::numeric_limits< DT_Scalar >::max(),
               &param,
               normal
               );

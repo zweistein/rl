@@ -20,6 +20,8 @@ namespace rl
       // assign data to means
       for (int dataIdx = 0; dataIdx < data.rows(); ++dataIdx)
       {
+        int bestCluster = 0;
+        int bestDist
         for (int i = 0; i < k; ++i)
         {
 

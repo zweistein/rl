@@ -72,22 +72,9 @@ DEF room2 Transform {
           }
         }
     }
-    DEF box1 Transform {
-      translation 2.950608e-3 -2.090914 0.500000
-      children 
-        Shape {
-          appearance Appearance {
-            material Material {
-            }
-          }
-          geometry Box {
-            size 2.546566 0.770132 0.901144
-          }
-        }
-    }
     DEF box1_3 Transform {
-      translation 2.950608e-3 -1.324784 0.500000
-      scale 0.471192 1 1
+      translation 2.950608e-3 -2.258650 0.500000
+      scale 0.471192 0.660766 1
       children 
         Shape {
           appearance Appearance {
@@ -100,8 +87,8 @@ DEF room2 Transform {
         }
     }
     DEF box1_7 Transform {
-      translation 2.950608e-3 -0.746290 0.500000
-      scale 0.135132 0.507524 1
+      translation 2.950608e-3 -1.833220 0.500000
+      scale 0.135130 1.058382 1
       children 
         Shape {
           appearance Appearance {
@@ -114,7 +101,7 @@ DEF room2 Transform {
         }
     }
     DEF box1_4 Transform {
-      translation 0.972154 0.578078 0.500000
+      translation 0.972154 0.578076 0.500000
       children 
         Shape {
           appearance Appearance {
@@ -122,7 +109,7 @@ DEF room2 Transform {
             }
           }
           geometry Box {
-            size 3.961928 4.233842e-2 0.890268
+            size 3.961924 4.233840e-2 0.890268
           }
         }
     }

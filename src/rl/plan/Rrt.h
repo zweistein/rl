@@ -97,6 +97,7 @@ namespace rl
 				::rl::math::Real uncertainty;
 				// added for PcRrt
 				::boost::shared_ptr<GaussianState> gState;
+				::boost::shared_ptr<ExtensionState> extState;
 
 			};
 			

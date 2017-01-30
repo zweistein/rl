@@ -56,6 +56,8 @@ namespace rl
 
 				void lastCollidingShapes(::std::string& first, ::std::string& second);
 
+				bool getCollisionPoint(::rl::math::Vector3& point);
+
 				bool getCollisionSurfaceNormal(const ::rl::math::Vector3& from, ::rl::math::Vector3& normalVector);
 				
 				::rl::sg::Model* create();

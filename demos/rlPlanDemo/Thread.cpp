@@ -353,6 +353,9 @@ Thread::run()
 			
 			if (!this->running) break;
 			
+			// rest 2 seconds in goal configuration
+			usleep(static_cast< std::size_t >(2.0f * 1000.0f * 1000.0f));
+
 			rl::plan::VectorList::reverse_iterator ri = path.rbegin();
 			rl::plan::VectorList::reverse_iterator rj = ++path.rbegin();
 			

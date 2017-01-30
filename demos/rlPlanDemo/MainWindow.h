@@ -82,8 +82,8 @@ public:
 	
 	boost::shared_ptr< rl::mdl::Dynamic > mdl2;
 	
-    boost::shared_ptr< rl::plan::NoisyModel > model;
-    // boost::shared_ptr< rl::plan::NoisyModel2D > model;
+    // boost::shared_ptr< rl::plan::NoisyModel > model;
+    boost::shared_ptr< rl::plan::NoisyModel2D > model;
 	
 	boost::shared_ptr< rl::plan::Model > model2;
 

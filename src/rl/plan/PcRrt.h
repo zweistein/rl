@@ -53,6 +53,17 @@ namespace rl
      */
     class PcRrt : public Rrt {
     public:
+      enum Action { CONNECT_MOVE, GUARDED_MOVE, CONNECT_SLIDE, GUARDED_SLIDE };
+
+      struct ActionCommand
+      {
+        ActionCommand() : ev(std::numeric_limits<::rl::math::Real>::max()) {};
+        Action action;
+        Neighbor neighbor;
+        ::rl::math::Vector sample;
+        ::rl::math::Real ev;
+      };
+
       PcRrt();
       ::std::string getName() const;
 
@@ -63,6 +74,9 @@ namespace rl
     protected:
       virtual bool solve();
 
+      ActionCommand selectAction(const Tree& tree);
+
+      void kNearest(const Tree& tree, const ::rl::math::Vector& chosen, const int k, std::vector<Neighbor>& neighbors);
       Neighbor nearest(const Tree& tree, const ::rl::math::Vector& chosen);
 
       //void sampleDirection(::rl::math::Vector& rd);
@@ -71,7 +85,7 @@ namespace rl
       bool sampleSlidingParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::rl::math::Matrix& particles, bool& isInCollision);
       bool sampleGoalParticles(const Neighbor& nearest, ::rl::math::Vector& goal, int nrParticles, ::rl::math::Matrix& particles);
 
-      bool projectOnSurface(const ::rl::math::Vector& point, const ::rl::math::Vector& pointOnSurface, const ::rl::math::Vector& normal, ::rl::math::Vector& out);
+      double projectOnSurface(const ::rl::math::Vector& point, const ::rl::math::Vector& pointOnSurface, const ::rl::math::Vector& normal, ::rl::math::Vector& out);
 
       void getAllCollidingShapes(::std::map<::std::string, bool>& collidingShapes);
       void getPath(VectorList& path);

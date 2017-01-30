@@ -1,6 +1,9 @@
 #ifndef _RL_PLAN_PCRRTEXTENSIONS_H_
 #define _RL_PLAN_PCRRTEXTENSIONS_H_
 
+#include <cmath>
+#include <set>
+
 #include <boost/shared_ptr.hpp>
 #include <boost/random.hpp>
 
@@ -27,18 +30,18 @@ namespace rl
         this->covariance = centered.transpose() * centered / (particles.rows()-1);
       }
 
-      ::rl::math::Real mahalanobis(::rl::math::Vector& x)
+      ::rl::math::Real mahalanobis(::rl::math::Vector& x) const
       {
         return sqrt((x - this->mean).transpose() * this->covariance.inverse() * (x - this->mean));
       }
 
-      ::rl::math::Matrix eigenvectors()
+      ::rl::math::Matrix eigenvectors() const
       {
         ::Eigen::EigenSolver<::rl::math::Matrix> eig(this->covariance);
         return eig.eigenvectors().real();
       }
 
-      ::rl::math::Vector eigenvalues()
+      ::rl::math::Vector eigenvalues() const
       {
         ::Eigen::EigenSolver<::rl::math::Matrix> eig(this->covariance);
         return eig.eigenvalues().real();
@@ -77,7 +80,7 @@ namespace rl
         }
       }
 
-      Gaussian gaussian()
+      Gaussian gaussian() const
       {
         return this->gaussianDistr;
       }
@@ -102,7 +105,7 @@ namespace rl
         this->inCollision = isInCollision;
       }
 
-      bool isInCollision()
+      bool isInCollision() const
       {
         return this->inCollision;
       }
@@ -118,7 +121,7 @@ namespace rl
         this->normal = normal;
       }
 
-      bool hasNormal()
+      bool hasNormal() const
       {
         return this->normalSet;
       }
@@ -132,6 +135,29 @@ namespace rl
       int dims;
       bool inCollision;
       bool normalSet;
+    };
+
+    class ExtensionState
+    {
+    public:
+      void setGuardedSlide(::rl::math::Vector& dir)
+      {
+        int angle = this->vectorToAngle(dir);
+        executedDirection.insert(angle);
+      }
+
+      bool executedGuardedSlide(::rl::math::Vector& dir)
+      {
+        return executedDirection.find(this->vectorToAngle(dir)) != executedDirection.end();
+      }
+
+    private:
+      int vectorToAngle(::rl::math::Vector& vec)
+      {
+        return (std::atan2(vec[1], vec[0]) - std::atan2(0, 1)) / M_PI * 180 / 45;
+      }
+
+      std::set<int> executedDirection;
     };
   }
 }

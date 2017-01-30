@@ -800,7 +800,8 @@ MainWindow::load(const QString& filename)
 		}
 	}
 	
-    this->model = boost::make_shared< rl::plan::NoisyModel >();
+    // this->model = boost::make_shared< rl::plan::NoisyModel >();
+    this->model = boost::make_shared< rl::plan::NoisyModel2D >();
 	
 	if (NULL != this->kin)
 	{

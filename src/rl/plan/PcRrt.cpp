@@ -68,6 +68,7 @@ namespace rl
       p.resize(1, this->model->getDof());
       p.row(0) = *this->start;
       this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(p);
+      this->tree[0][this->begin[0]].extState = ::boost::make_shared<ExtensionState>();
 
       timer.start();
       timer.stop();
@@ -88,13 +89,31 @@ namespace rl
         bool doGuardedMove = doSlideDistr(*this->gen) < 20;
         bool doSlide = doSlideDistr(*this->gen) > 80;
         // sample[...]Particles will return false if the particle set is not useful
-        bool sampleResult;
+        bool sampleResult = false;
         bool isInCollision = false;
+
+        ActionCommand command = this->selectAction(this->tree[0]);
+
+        // if (command.action == Action::CONNECT_MOVE)
+        // {
+        //   sampleResult = this->sampleConnectParticles(command.neighbor, command.sample, this->nrParticles, particles, isInCollision);
+        // }
+        // else if (command.action == Action::GUARDED_MOVE)
+        // {
+        //   // sampleResult = false;
+        //   sampleResult = this->sampleGuardedParticles(command.neighbor, command.sample, this->nrParticles, particles, isInCollision);
+        // }
+        // else
+        // {
+        //   // sampleResult = false;
+        //   sampleResult = this->sampleSlidingParticles(command.neighbor, command.sample, this->nrParticles, particles, isInCollision);
+        // }
+
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
         {
           sampleResult = this->sampleSlidingParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
         }
-        else if (doGuardedMove)
+        else if (doGuardedMove && !this->tree[0][n.first].gState->isInCollision())
         {
           sampleResult = this->sampleGuardedParticles(n, chosenSample, this->nrParticles, particles, isInCollision);
         }
@@ -116,15 +135,25 @@ namespace rl
           Vertex newVertex = this->addVertex(this->tree[0], ::boost::make_shared<::rl::math::Vector>(gaussian.mean));
           this->tree[0][newVertex].gState = ::boost::make_shared<GaussianState>(particles);
           this->tree[0][newVertex].gState->setColliding(isInCollision);
+          this->tree[0][newVertex].extState = ::boost::make_shared<ExtensionState>();
           if (isInCollision)
           {
             ::rl::math::Vector3 rayStart, rayNormal;
+
             rayStart[0] = (*this->tree[0][n.first].q)[0];
             rayStart[1] = (*this->tree[0][n.first].q)[1];
             rayStart[2] = 0.0;
             if (this->solidScene->getCollisionSurfaceNormal(rayStart, rayNormal))
             {
-              this->tree[0][newVertex].gState->setNormal(rayNormal);
+              if (rayNormal[0] > 0.1 || rayNormal[1] > 0.1)
+              {
+                // this is a useful normal
+                this->tree[0][newVertex].gState->setNormal(rayNormal);
+              }
+              else
+              {
+                std::cout << "zero normal" << std::endl;
+              }
             }
           }
           this->addEdge(chosenVertex, newVertex, this->tree[0]);
@@ -143,7 +172,6 @@ namespace rl
             ::rl::math::Matrix goalParticles;
             if (this->sampleGoalParticles(nearest, *this->goal, this->nrParticles, goalParticles))
             {
-              this->drawParticles(goalParticles);
               Gaussian goalGaussian(goalParticles);
               ::rl::math::Real error = goalGaussian.eigenvalues().maxCoeff();
               std::cout << "reached goal with error: " << error << " (max allowed: " << this->goalEpsilon << ")" << std::endl;
@@ -168,7 +196,250 @@ namespace rl
       return false;
     }
 
-    PcRrt::Neighbor PcRrt::nearest(const Tree& tree, const ::rl::math::Vector& chosen)
+    PcRrt::ActionCommand PcRrt::selectAction(const Tree& tree)
+    {
+      const int k = 1;
+      std::vector<Neighbor> neighbors;
+      ::rl::math::Vector sample(this->model->getDof());
+      this->choose(sample);
+      this->kNearest(this->tree[0], sample, k, neighbors);
+
+      // store action commands for every possible move in here
+      ActionCommand connectMove[k], guardedMove[k], connectSlide[k], guardedSlide[k];
+
+      int currK = 0;
+      for (auto n : neighbors)
+      {
+        // calculate expected values for every possible neighbor
+        Vertex vertex = n.first;
+        const auto gState = tree[vertex].gState;
+        const auto extState = tree[vertex].extState;
+        const auto& mean = gState->mean();
+        const auto& particles = gState->particles();
+        const ::rl::math::Real distance = this->model->distance(mean, sample);
+
+        ::rl::math::Vector motionNoise(this->model->getDof());
+        this->model->sampleMotionError(motionNoise);
+
+        // connect-move
+        {
+          connectMove[currK].action = Action::CONNECT_MOVE;
+          connectMove[currK].neighbor = n;
+
+          ::rl::math::Matrix movedParticles;
+          movedParticles.resize(particles.rows(), particles.cols());
+
+          for (int rowIdx = 0; rowIdx < particles.rows(); ++rowIdx)
+          {
+            const auto particle = particles.row(rowIdx).transpose();
+            const auto particleOffset = particle - mean;
+            const auto shiftedChosen = sample + particleOffset;
+            
+            ::rl::math::Vector dest(this->model->getDof());
+            this->model->interpolateNoisy(particle, shiftedChosen, distance, motionNoise, dest);
+
+            movedParticles.row(rowIdx) = dest;
+          }
+
+          Gaussian g(movedParticles);
+          connectMove[currK].ev = g.eigenvalues().sum();
+          connectMove[currK].sample = sample;
+        }
+
+        // guarded-move
+        guardedMove[currK].action = Action::GUARDED_MOVE;
+        guardedMove[currK].neighbor = n;
+        if (gState->isInCollision())
+        {
+          // dont do guarded moves from a colliding state
+          guardedMove[currK].ev = std::numeric_limits<::rl::math::Real>::max();
+        }
+        else
+        {
+          ::rl::math::Vector relDir(this->model->getDof());
+          gState->sample(relDir);
+          ::rl::math::Vector direction = (relDir - mean).normalized();
+
+          // expect uncertainty reduction in sampled direction
+          // TODO: this should incorporate motion model, e.g. by using avg distance
+          // of previous guarded moves, or using raycast to measure expected distance
+          ::rl::math::Matrix projectedParticles;
+          projectedParticles.resize(particles.rows(), particles.cols());
+          for (int rowIdx = 0; rowIdx < particles.rows(); ++rowIdx)
+          {            
+            ::rl::math::Vector proj(this->model->getDof());
+            this->projectOnSurface(particles.row(rowIdx).transpose(), mean, direction, proj);
+
+            projectedParticles.row(rowIdx) = proj;
+          }
+
+          Gaussian g(projectedParticles);
+          guardedMove[currK].ev = g.eigenvalues().sum() * 100;
+          guardedMove[currK].sample = relDir;
+        }
+
+        // connect-slide
+        connectSlide[currK].action = Action::CONNECT_SLIDE;
+        connectSlide[currK].neighbor = n;
+        if (!gState->isInCollision() || !gState->hasNormal())
+        {
+          connectSlide[currK].ev = std::numeric_limits<::rl::math::Real>::max();
+        } 
+        else
+        {
+          ::rl::math::Vector3& storedNormal = gState->getNormal();
+          ::rl::math::Vector normal(this->model->getDof());
+          normal[0] = storedNormal[0];
+          normal[1] = storedNormal[1];
+
+          ::rl::math::Vector target(this->model->getDof());
+          this->projectOnSurface(sample, mean, normal, target);
+
+          ::rl::math::Real slidingDistance = this->model->distance(mean, target);
+
+          ::rl::math::Matrix movedParticles;
+          movedParticles.resize(particles.rows(), particles.cols());
+
+          for (int rowIdx = 0; rowIdx < particles.rows(); ++rowIdx)
+          {
+            const auto particle = particles.row(rowIdx).transpose();
+            const auto particleOffset = particle - mean;
+            const auto shiftedTarget = target + particleOffset;
+            
+            ::rl::math::Vector dest(this->model->getDof());
+            this->model->interpolateNoisy(particle, shiftedTarget, slidingDistance, motionNoise, dest);
+            ::rl::math::Vector proj(this->model->getDof());
+            this->projectOnSurface(dest, mean, normal, proj);
+
+            movedParticles.row(rowIdx) = proj;
+          }
+
+          Gaussian g(movedParticles);
+          connectSlide[currK].ev = g.eigenvalues().sum();
+          connectSlide[currK].sample = sample;
+        }
+
+        // guarded-slide
+        guardedSlide[currK].action = Action::GUARDED_SLIDE;
+        guardedSlide[currK].neighbor = n;
+        if (!gState->isInCollision() || !gState->hasNormal())
+        {
+          guardedSlide[currK].ev = std::numeric_limits<::rl::math::Real>::max();
+        } 
+        else
+        {
+          ::rl::math::Vector3& storedNormal = gState->getNormal();
+          ::rl::math::Vector normal(this->model->getDof());
+          normal[0] = storedNormal[0];
+          normal[1] = storedNormal[1];
+
+          ::rl::math::Vector target(this->model->getDof());
+          this->projectOnSurface(sample, mean, normal, target);
+
+          ::rl::math::Vector direction(this->model->getDof());
+          direction = (target - mean).normalized();
+          if (extState->executedGuardedSlide(direction))
+          {
+            // we have done a guarded slide in this direction before, 
+            // bad idea to do it again
+            // guardedSlide[currK].ev = std::numeric_limits<::rl::math::Real>::max();
+            guardedSlide[currK].ev = 333;
+          }
+          else
+          {
+            // in 2D, guarded slides reset uncertainty in both dimensions,
+            // in higher dimensins one would have to project twice and sum up
+            // the eigenvalues again
+            guardedSlide[currK].ev = 0;            
+          }
+          guardedSlide[currK].sample = sample;
+
+        }
+
+        currK++;
+      }
+
+      // std::cout << "cm\tgm\tcs\tgs\n";
+      // for (int i = 0; i < k; ++i)
+      // {
+      //   std::cout << connectMove[i].ev << '\t' << guardedMove[i].ev << '\t' << connectSlide[i].ev << '\t' << guardedSlide[i].ev << '\n';
+      // }
+
+      ActionCommand bestAction;
+      bestAction.ev = std::numeric_limits<::rl::math::Real>::max();
+      int bestNeighborIdx;
+
+      // find best action
+      for (int i = 0; i < k; ++i)
+      {
+        if (connectMove[i].ev < bestAction.ev)
+        {
+          bestAction = connectMove[i];
+          bestNeighborIdx = i;
+        }
+
+        if (guardedMove[i].ev < bestAction.ev)
+        {
+          bestAction = guardedMove[i];
+          bestNeighborIdx = i;
+        }
+
+        if (connectSlide[i].ev < bestAction.ev)
+        {
+          bestAction = connectSlide[i];
+          bestNeighborIdx = i;
+        }
+
+        if (guardedSlide[i].ev < bestAction.ev)
+        {
+          bestAction = guardedSlide[i];
+          bestNeighborIdx = i;
+        }
+      }
+
+      // std::cout << "best: " << bestAction.action << " (Neighbor " << bestNeighborIdx << ")\n";
+
+      // ActionCommand command;
+      // command.action = bestAction;
+      // command.neighbor = neighbors[bestNeighborIdx];
+      // command.sample = sample;
+
+      if (bestAction.action == Action::GUARDED_SLIDE)
+      {
+        // mark as executed
+        // TODO: this is wrong, we need direciton relative to mean
+        tree[bestAction.neighbor.first].extState->setGuardedSlide(bestAction.sample);
+      }
+
+      return bestAction;
+    }
+
+    void PcRrt::kNearest(const Tree& tree, const ::rl::math::Vector& chosen, const int k, std::vector<Neighbor>& neighbors)
+    {
+      struct NeighborCompare
+      {
+        bool operator()(const Neighbor& lhs, const Neighbor& rhs) const
+        {
+          return lhs.second < rhs.second;
+        }
+      };
+
+      std::set<Neighbor, NeighborCompare> nSet;
+ 
+      for (VertexIteratorPair i = ::boost::vertices(tree); i.first != i.second; ++i.first)
+      {
+        ::rl::math::Real d = this->model->transformedDistance(chosen, *tree[*i.first].q);
+        nSet.insert(Neighbor(*i.first, d));
+      }
+
+      int amount = 0;
+      for (auto n = nSet.begin(); n != nSet.end() && amount < k; ++n, ++amount)
+      {
+        neighbors.push_back(*n);
+      }
+    }
+
+    Rrt::Neighbor PcRrt::nearest(const Tree& tree, const ::rl::math::Vector& chosen)
     {
       struct NeighborCompare
       {
@@ -610,7 +881,7 @@ namespace rl
       return true;
     }
 
-    bool PcRrt::projectOnSurface(const ::rl::math::Vector& point, const ::rl::math::Vector& pointOnSurface, const ::rl::math::Vector& normal, ::rl::math::Vector& out)
+    double PcRrt::projectOnSurface(const ::rl::math::Vector& point, const ::rl::math::Vector& pointOnSurface, const ::rl::math::Vector& normal, ::rl::math::Vector& out)
     {
       double dist = (point-pointOnSurface).dot(normal);
       out = point-dist*normal;
@@ -643,7 +914,7 @@ namespace rl
       // project goal on sliding surface
       ::rl::math::Vector pVec = *(this->tree[0][nearest.first].q);
       ::rl::math::Vector goal;
-      double dist = projectOnSurface(chosen, pVec, normal, goal);
+      projectOnSurface(chosen, pVec, normal, goal);
 
       this->drawSurfaceNormal(pVec, normal);
 
@@ -669,7 +940,7 @@ namespace rl
         //Sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
         this->model->sampleMotionError(motionNoise);
-        projectOnSurface(motionNoise, pVec, normal, motionNoise);
+        // projectOnSurface(motionNoise, pVec, normal, motionNoise);
 
         ::rl::math::Vector mean = this->tree[0][nearest.first].gState->mean();
 
@@ -686,6 +957,18 @@ namespace rl
         }
         slidingSurface = allColls.begin()->first;
 
+        do
+        {
+          // move into direction of surface normal to escape from sliding surface
+          init += normal * this->delta;
+          this->model->setPosition(init);
+          this->model->updateFrames();
+          this->getAllCollidingShapes(allColls);
+          // std::cout << normal << std::endl;
+        }
+        while (allColls[slidingSurface]);
+        init -= normal * this->delta;
+
         ::rl::math::Vector initialError = init - mean;
         ::rl::math::Vector target = goal + initialError;
 
@@ -695,9 +978,11 @@ namespace rl
 
         ::rl::math::Vector nextStep(this->model->getDof());
 
+        bool reached = false;
         while (true)
         {
           this->model->interpolateNoisy(init, target,  step / distance, motionNoise, nextStep);
+
           this->model->setPosition(nextStep);
           this->model->updateFrames();
 
@@ -711,15 +996,22 @@ namespace rl
             if (allColls[slidingSurface])
             {
               // we moved into sliding surface, so reflect out
-              // do
-              // {
+              do
+              {
                 // move into direction of surface normal to escape from sliding surface
                 nextStep += normal * this->delta;
                 this->model->setPosition(nextStep);
                 this->model->updateFrames();
-                // this->getAllCollidingShapes(allColls);
+                this->getAllCollidingShapes(allColls);
+                // std::cout << normal << std::endl;
+              }
+              while (allColls[slidingSurface]);
+              // std::cout << '\n';
+              // if (count >= 10)
+              // {
+              //   std::cout << "abort surface " << slidingSurface << std::endl;
+              //   return false;
               // }
-              // while (allColls[slidingSurface]);
               // std::cout << "done" << std::endl;
 
               // check if we are in free-space or if we have another collision
@@ -738,8 +1030,30 @@ namespace rl
           }
           else
           {
-            // lost contact
-            break;
+            int count = 0;
+            ::rl::math::Vector lostContactTest(nextStep);
+            do
+            {
+              // move into direction of surface to check if actually lost contact
+              // or just had not enough surface pressure
+              lostContactTest += -1 * normal * this->delta;
+              this->model->setPosition(lostContactTest);
+              this->model->updateFrames();
+              this->getAllCollidingShapes(allColls);
+              count++;
+            }
+            while (!allColls[slidingSurface] && count < 10);
+            // while (!this->model->isColliding() && count < 10);
+            if (count >= 10)
+            {
+              // lost contact
+              // std::cout << "lost contact" << std::endl;
+              break;              
+            }
+            else 
+            {
+              nextStep = lostContactTest;
+            }
           }
         }
 

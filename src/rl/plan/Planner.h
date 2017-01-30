@@ -79,8 +79,8 @@ namespace rl
 			/** Goal configuration. */
 			::rl::math::Vector* goal;
 			
-      NoisyModel* model;
-      // NoisyModel2D* model;
+      // NoisyModel* model;
+      NoisyModel2D* model;
 			
 			/** Start configuration. */
 			::rl::math::Vector* start;
