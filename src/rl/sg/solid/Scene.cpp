@@ -114,7 +114,7 @@ namespace rl
 
             CollisionQueryResult res;
             res.commonPoint = lastCollisionPoint;
-            res.isSensor = (first->getName() == "sensor");
+            res.isSensor = (first->getName().find("sensor") != std::string::npos);
             lastCollisions[collShapes]=res;
 
             return true;
