@@ -60,13 +60,14 @@ namespace rl
       ::rl::math::Real goalEpsilon;
       ::rl::sg::solid::Scene *solidScene;
       void getPath(VectorList& path, int i);
+      void writeOutCurrentPath(std::string& path_string);
     protected:
       virtual bool solve();
 
       void sampleDirection(::rl::math::Vector& rd);
       bool sampleConnectParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, bool goalConnect, ::std::vector<Particle>& particles);
       bool sampleGuardedParticles(const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::std::vector<Particle>& particles);
-      bool sampleSlidingParticles(bool guardedMove, const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::std::vector<Particle>& particles);
+      bool sampleSlidingParticles(bool guardedMove, const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::std::vector<Particle>& particles, ::rl::math::Vector3& slidingNormal);
 
       bool isEqualCollisionState(::rl::sg::solid::Scene::CollisionMap& first, ::rl::sg::solid::Scene::CollisionMap& second);
 

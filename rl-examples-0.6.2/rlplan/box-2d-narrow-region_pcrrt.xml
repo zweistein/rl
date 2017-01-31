@@ -96,7 +96,7 @@
       <q>0.1</q>
       <q>0.1</q>
     </initialError>
-    <goalEpsilon>0.02</goalEpsilon>
+    <goalEpsilon>0.1</goalEpsilon>
     <!-- <useMotionError/> -->
     <uniformSampler>
       <seed>1</seed>

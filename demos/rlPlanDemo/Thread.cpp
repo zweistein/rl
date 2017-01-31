@@ -298,6 +298,20 @@ Thread::run()
     if (rl::plan::PcRrt* pcrrt = dynamic_cast< rl::plan::PcRrt* >(MainWindow::instance()->planner.get()))
     {
 
+      std::fstream path_log;
+      path_log.open("solutionpath.csv", std::ios::in | std::ios::out | std::ios_base::trunc);
+
+      for(int j=0; j<MainWindow::instance()->model->getDof(); j++)
+      {
+        path_log<<"q"<<j<<"\t ";
+      }
+      path_log << "expectContact\t normal_x\t normal_y\t normal_z" << std::endl;
+
+
+      std::string path_str;
+      pcrrt->writeOutCurrentPath(path_str);
+      path_log<<path_str<<std::endl;
+      path_log.close();
 
       for(int i=0; i<pcrrt->nrParticles; i++)
       {

@@ -108,7 +108,6 @@ namespace rl
       {
       }
 
-
       ::rl::math::Vector config;
       std::vector<Contact> contacts;
     };
@@ -116,9 +115,10 @@ namespace rl
     class GaussianState
     {
     public:
-      GaussianState(const ::std::vector<Particle>& particles) :
+      GaussianState(const ::std::vector<Particle>& particles, const ::rl::math::Vector3 normal = ::rl::math::Vector3()) :
       gen(42),
-      particles(particles)
+      particles(particles),
+      slidingNormal(normal)
       {
         this->init(particles);
       }
@@ -162,6 +162,16 @@ namespace rl
         return (this->particles[0].contacts.size() != 0);
       }
 
+      bool isSlidingMove()
+      {
+        return (this->slidingNormal.norm()>0.1);
+      }
+
+      ::rl::math::Vector3 getSlidingNormal()
+      {
+        return this->slidingNormal;
+      }
+
       const ::std::vector<Particle>& getParticles()
       {
         return particles;
@@ -188,6 +198,7 @@ namespace rl
       }
 
       ::std::vector<Particle> particles;
+      ::rl::math::Vector3 slidingNormal;
       Gaussian configDistr;
       boost::random::mt19937 gen;
       ::std::vector<boost::random::normal_distribution<> > configSampleDistributions;

@@ -165,6 +165,8 @@ namespace rl
         Vertex chosenVertex = n.first;
 
         ::std::vector<Particle> particles;
+        ::rl::math::Vector3 slidingNormal;
+        slidingNormal.setZero();
 
         // randomly decide to do a slide or not
         boost::random::uniform_int_distribution<> doSlideDistr(0, 100);
@@ -172,9 +174,10 @@ namespace rl
         bool doSlide = doSlideDistr(*this->gen) > 70;
         // sample[...]Particles will return false if the particle set is not useful
         bool sampleResult = false;
+
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
         {
-          sampleResult = this->sampleSlidingParticles(false, n, chosenSample, this->nrParticles, particles);
+          sampleResult = this->sampleSlidingParticles(true, n, chosenSample, this->nrParticles, particles, slidingNormal);
           //          sampleResult = this->sampleConnectParticles(n, *goal, this->nrParticles, false, particles);
         }
         else if (doGuardedMove)
@@ -192,7 +195,7 @@ namespace rl
           // visualize particles
           //this->drawParticles(particles);
 
-          ::boost::shared_ptr<GaussianState> gaussianState = ::boost::make_shared<GaussianState>(particles);
+          ::boost::shared_ptr<GaussianState> gaussianState = ::boost::make_shared<GaussianState>(particles, slidingNormal);
           Gaussian g = gaussianState->configGaussian();
           //this->drawEigenvectors(g, 1.0);
 
@@ -462,7 +465,7 @@ namespace rl
         //        while (this->model->isColliding())
         //        {
         //          noisyFrom[0] += stepX;
-        //          noisyFrom[1] += stepY;
+        //          noisyFrom[1] += stepY;nt
 
         //          this->model->setPosition(noisyFrom);
         //          this->model->updateFrames();
@@ -495,6 +498,47 @@ namespace rl
         //        resultFile.open(this->getName() + std::string("_results.txt"), std::ios::out | std::ios::app);
         //        resultFile << error << std::endl;
       }
+    }
+
+    void PcRrt::writeOutCurrentPath(std::string& path_string)
+    {
+      std::stringstream path_ss;
+      Vertex i = this->end[0];
+      std::list< ::boost::shared_ptr<GaussianState> > states;
+      while (i != this->begin[0])
+      {
+        ::boost::shared_ptr<GaussianState> gs = this->tree[0][i].gState;
+        states.push_front(gs);
+        i = ::boost::source(*::boost::in_edges(i, this->tree[0]).first, this->tree[0]);
+      }
+      ::boost::shared_ptr<GaussianState> gs = this->tree[0][i].gState;
+      states.push_front(gs);
+
+      for( std::list< ::boost::shared_ptr<GaussianState> >::iterator it = states.begin(); it != states.end(); it++)
+      {
+
+        ::rl::math::Vector qm = (*it)->configMean();
+        for(int i=0; i<qm.rows(); i++)
+          path_ss<<qm(i)<<"\t";
+        int inContact = 0;
+        if((*it)->isInCollision())
+          inContact = 1;
+        path_ss<<inContact<<"\t";
+
+        if((*it)->isSlidingMove())
+        {
+          path_ss<<(*it)->getSlidingNormal()(0)<<"\t"<<(*it)->getSlidingNormal()(1)<<"\t"<<(*it)->getSlidingNormal()(2);
+        }
+        else
+        {
+          path_ss<<"0\t0\t0\t";
+        }
+        path_ss<<std::endl;
+
+
+      }
+      path_string = path_ss.str();
+      std::cout<<path_string<<std::endl;
     }
 
     bool PcRrt::isEqualCollisionState(::rl::sg::solid::Scene::CollisionMap& first, ::rl::sg::solid::Scene::CollisionMap& second)
@@ -932,7 +976,7 @@ namespace rl
     /**
       Samples a set of particles for a sliding move along a surface.
     */
-    bool PcRrt::sampleSlidingParticles(bool guardedMove, const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::std::vector<Particle>& particles)
+    bool PcRrt::sampleSlidingParticles(bool guardedMove, const Neighbor& nearest, const ::rl::math::Vector& chosen, int nrParticles, ::std::vector<Particle>& particles, ::rl::math::Vector3& slidingNormal)
     {
       if (!this->tree[0][nearest.first].gState->isInCollision())
       {
@@ -961,7 +1005,7 @@ namespace rl
       std::pair<std::string, std::string> slidingPair;
       slidingPair.first  = slidingContact.shape_robot;
       slidingPair.second = slidingContact.shape_env;     
-      ::rl::math::Vector3 slidingNormal = slidingContact.normal_env;
+      slidingNormal = slidingContact.normal_env;
 
       // We move the EE frame to the contact point. This way the Jacobian
       // can be used to project the contact point back on the sliding surface.
@@ -995,28 +1039,6 @@ namespace rl
         // sample a starting point
         ::rl::math::Vector init(this->model->getDof());
         this->tree[0][nearest.first].gState->sampleConfigurationFromParticle(init, pIdx);
-
-//        if(pIdx == 0) //Compute desired EE velocity twist tdot
-//        {
-
-//          this->model->setPosition(init);
-//          this->model->updateFrames();
-
-//          ee_world = this->model->forwardPosition();
-
-//          //This is the target pose of our slide
-//          ::rl::math::Transform goal_world = ee_world;
-//          goal_world.translation() = chosen_proj;
-
-//          //Compute a 6d Velocity twist for the task-space controller
-//          ::rl::math::transform::toDelta(ee_world, goal_world, tdot);
-
-//          //2D models do not move in z-direction (this is a convention)
-//          if(this->model->getDof() <= 2)
-//            tdot(2) = 0;
-
-//          tdot.normalize();
-//        }
 
         //Sample noise
         ::rl::math::Vector motionNoise(this->model->getDof());
