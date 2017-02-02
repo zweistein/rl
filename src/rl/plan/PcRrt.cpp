@@ -124,14 +124,22 @@ namespace rl
 
       for(int i=0; i< this->nrParticles; i++)
       {
-        this->model->sampleInitialError(initialError);
         ::rl::math::Vector sample = *this->start;
-        for(int j=0; j<this->model->getDof(); j++)
+        do
         {
-          sample[j]+=initialError[j];
-        }
+          this->model->sampleInitialError(initialError);
+
+          for(int j=0; j<this->model->getDof(); j++)
+          {
+            sample[j]+=initialError[j];
+          }
+          this->model->setPosition(sample);
+          this->model->updateFrames();
+        }while(this->model->isColliding());
+
         Particle p(sample);
         v.push_back(p);
+
       }
 
 
