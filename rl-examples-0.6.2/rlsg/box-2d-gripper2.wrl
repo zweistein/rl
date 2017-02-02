@@ -13,7 +13,7 @@ Transform {
         DEF body1 Transform {
           translation 0 1.936458e-2 0
           children [
-            DEF sensor1 Shape {
+            Shape {
               appearance Appearance {
                 material Material {
                   diffuseColor 1 1 0
@@ -42,7 +42,7 @@ Transform {
             }
             DEF body1_8 Transform {
               translation 0.367744 -0.296136 0
-              scale 0.492624 1.887934 1
+              scale 0.492624 1.687934 1
               children 
                 DEF sensor3 Shape {
                   appearance Appearance {

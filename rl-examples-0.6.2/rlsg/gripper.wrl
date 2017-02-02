@@ -113,18 +113,6 @@ DEF room2 Transform {
           }
         }
     }
-    DEF box1_4 Transform {
-      translation 0.972154 0.578078 0.500000
-      children 
-        Shape {
-          appearance Appearance {
-            material Material {
-            }
-          }
-          geometry Box {
-            size 3.961928 4.233842e-2 0.890268
-          }
-        }
-    }
+   
   ]
 }
