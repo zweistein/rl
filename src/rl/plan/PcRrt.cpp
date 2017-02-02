@@ -138,6 +138,10 @@ namespace rl
 
 
       this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(v);
+      this->model->setPosition(*this->start);
+      this->model->updateFrames();
+      this->tree[0][this->begin[0]].t = ::boost::make_shared<::rl::math::Transform>(this->model->forwardPosition());
+
 
       timer.start();
       timer.stop();
@@ -171,14 +175,14 @@ namespace rl
         // randomly decide to do a slide or not
         boost::random::uniform_int_distribution<> doSlideDistr(0, 100);
         bool doGuardedMove = doSlideDistr(*this->gen) < 30;
-        bool doSlide = doSlideDistr(*this->gen) > 70;
+        bool doSlide = doSlideDistr(*this->gen) > 50;
         // sample[...]Particles will return false if the particle set is not useful
         bool sampleResult = false;
 
-        if (doSlide && this->tree[0][n.first].gState->isInCollision())
+        if (doSlide)
         {
-          sampleResult = this->sampleSlidingParticles(true, n, chosenSample, this->nrParticles, particles, slidingNormal);
-          //          sampleResult = this->sampleConnectParticles(n, *goal, this->nrParticles, false, particles);
+          if( this->tree[0][n.first].gState->isInCollision())
+            sampleResult = this->sampleSlidingParticles(false, n, chosenSample, this->nrParticles, particles, slidingNormal);
         }
         else if (doGuardedMove)
         {
@@ -202,13 +206,18 @@ namespace rl
 //          if(particles.begin()->contacts.size()>0)
 //            this->drawSurfaceNormal(particles.begin()->contacts.begin()->point,particles.begin()->contacts.begin()->normal_env,0.1);
 
-
+          //std::cout<<g.eigenvalues().sum()<<std::endl;
+          if(g.eigenvalues().sum()<0.1)
+          {
           // add a new vertex and edge
           VectorPtr mean = ::boost::make_shared<::rl::math::Vector>(g.mean);
           //this->viewer->drawConfiguration(g.mean);
           Vertex newVertex = this->addVertex(this->tree[0], mean);
 
           this->tree[0][newVertex].gState = gaussianState;
+          this->model->setPosition(g.mean);
+          this->model->updateFrames();
+          this->tree[0][newVertex].t = ::boost::make_shared<::rl::math::Transform>(this->model->forwardPosition());
 
           this->addEdge(chosenVertex, newVertex, this->tree[0]);
 
@@ -248,12 +257,17 @@ namespace rl
                 // add goal connect step to tree
                 Vertex connected = this->addVertex(this->tree[0], possibleGoal.q);
                 this->tree[0][connected].gState = goalState;
+                this->model->setPosition(*possibleGoal.q);
+                this->model->updateFrames();
+                this->tree[0][connected].t = ::boost::make_shared<::rl::math::Transform>(this->model->forwardPosition());
+
                 this->addEdge(possibleGoal.neighbor.first, connected, this->tree[0]);
                 this->end[0] = connected;
                 return true;
               }
             }
           }
+        }
         }
 
         timer.stop();
@@ -504,35 +518,38 @@ namespace rl
     {
       std::stringstream path_ss;
       Vertex i = this->end[0];
-      std::list< ::boost::shared_ptr<GaussianState> > states;
+      std::list< Vertex > states;
       while (i != this->begin[0])
       {
-        ::boost::shared_ptr<GaussianState> gs = this->tree[0][i].gState;
-        states.push_front(gs);
+        states.push_front(i);
         i = ::boost::source(*::boost::in_edges(i, this->tree[0]).first, this->tree[0]);
       }
-      ::boost::shared_ptr<GaussianState> gs = this->tree[0][i].gState;
-      states.push_front(gs);
 
-      for( std::list< ::boost::shared_ptr<GaussianState> >::iterator it = states.begin(); it != states.end(); it++)
+      states.push_front(i);
+
+      for( std::list< Vertex >::iterator it = states.begin(); it != states.end(); it++)
       {
-
-        ::rl::math::Vector qm = (*it)->configMean();
+        ::boost::shared_ptr<GaussianState> gs = this->tree[0][*it].gState;
+        ::rl::math::Vector qm = gs->configMean();
         for(int i=0; i<qm.rows(); i++)
           path_ss<<qm(i)<<"\t";
         int inContact = 0;
-        if((*it)->isInCollision())
+        if(gs->isInCollision())
           inContact = 1;
         path_ss<<inContact<<"\t";
 
-        if((*it)->isSlidingMove())
+        if(gs->isSlidingMove())
         {
-          path_ss<<(*it)->getSlidingNormal()(0)<<"\t"<<(*it)->getSlidingNormal()(1)<<"\t"<<(*it)->getSlidingNormal()(2);
+          path_ss<<gs->getSlidingNormal()(0)<<"\t"<<gs->getSlidingNormal()(1)<<"\t"<<gs->getSlidingNormal()(2);
         }
         else
         {
           path_ss<<"0\t0\t0\t";
         }
+
+        ::rl::math::Transform ee_t = *(this->tree[0][*it].t);
+        ::rl::math::Quaternion q(ee_t.linear());
+        path_ss<<ee_t(0,3)<<" "<<ee_t(1,3)<<" "<<ee_t(2,3)<<" "<< q.x()<<"\t"<<q.y()<<"\t"<<q.z()<<"\t"<<q.w();
         path_ss<<std::endl;
 
 
@@ -680,6 +697,8 @@ namespace rl
             //Body shape must be sensor
             if(!collMap.begin()->second.isSensor)
               return false;
+
+
 
             if(collMap.size()>1)
             {

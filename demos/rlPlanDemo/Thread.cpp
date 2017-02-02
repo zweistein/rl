@@ -305,7 +305,7 @@ Thread::run()
       {
         path_log<<"q"<<j<<"\t ";
       }
-      path_log << "expectContact\t normal_x\t normal_y\t normal_z" << std::endl;
+      path_log << "expectContact\t normal_x\t normal_y\t normal_z\t ee_px \t ee_py \t ee_pz \t ee_rx \t ee_ry \t ee_rz \t ee_rw" << std::endl;
 
 
       std::string path_str;
