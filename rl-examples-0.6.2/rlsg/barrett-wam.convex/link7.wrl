@@ -7,10 +7,10 @@ DEF link7 Transform {
 
 
 Transform {
- translation 0 0 0.1
+ translation 0 0 0.14
  children 
   DEF sensor Shape {
-  geometry Sphere { radius 0.03 }
+  geometry Sphere { radius 0.025 }
   appearance Appearance {
    material Material {}
   }

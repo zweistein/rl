@@ -177,7 +177,7 @@
 			<translation>
 				<x>0</x>
 				<y>0</y>
-				<z>0.1</z>
+				<z>0.135</z>
 			</translation>
 		</transform>
 		<frame id="tcp"/>

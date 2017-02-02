@@ -4,9 +4,9 @@ DEF link7 Transform {
   translation 0.000000 0.000000 -0.006000
   children [
   Transform {
- translation 0 0 0.1
+ translation 0 0 0.14
  children Shape {
-  geometry Sphere { radius 0.03 }
+  geometry Sphere { radius 0.025 }
   appearance Appearance {
    material Material { diffuseColor 1.0000 0.3000 0.3000 
                        specularColor 0.8 0.8 0.8 
