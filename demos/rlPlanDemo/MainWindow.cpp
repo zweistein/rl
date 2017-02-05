@@ -1407,6 +1407,8 @@ MainWindow::load(const QString& filename)
     this->motionError = boost::make_shared< rl::math::Vector >(motionError.getNodeNr());
     this->model->motionError = this->motionError.get();
 
+    rrtCon->nrParticles = (int) path.eval("number(nrParticles)", planner.getNodeTab(0)).getFloatval(50.0f);
+
     for (int i = 0; i < motionError.getNodeNr(); ++i)
     {
         (*this->model->motionError)(i) = std::atof(motionError.getNodeTab(i).getContent().c_str());

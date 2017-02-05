@@ -45,8 +45,6 @@ namespace rl
         return eig.eigenvalues().real();
       }
 
-      ::rl::math::Vector mean;
-      ::rl::math::Matrix covariance;
 
       void init(const ::std::vector<::rl::math::Vector>& values)
       {
@@ -73,6 +71,9 @@ namespace rl
         // calculate sample covariance
         this->covariance = centered.transpose() * centered / (values.rows()-1);
       }
+      
+      ::rl::math::Vector mean;
+      ::rl::math::Matrix covariance;
     };
 
     class Contact

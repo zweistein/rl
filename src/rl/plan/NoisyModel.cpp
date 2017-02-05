@@ -43,8 +43,22 @@ namespace rl
     NoisyModel::interpolateNoisy(const ::rl::math::Vector& q1, const ::rl::math::Vector& q2, const ::rl::math::Real& alpha, const ::rl::math::Vector& noise, ::rl::math::Vector& q) const
     {
 
-      interpolate(q1,q2,alpha,q);
-      q=q+alpha*(q2-q1).cwiseProduct(noise);
+      // interpolate(q1,q2,alpha,q);
+      // q=q+alpha*(q2-q1).cwiseProduct(noise);
+
+      // noise[0] -> angle error
+      // noise[1] -> step error
+
+      ::rl::math::Vector direction = q2 - q1;
+      ::rl::math::Real distance = this->distance(q1, q2) * alpha;
+      distance += distance * noise[1];
+      
+      ::rl::math::Real angle = ::std::atan2(direction[1], direction[0]) - ::std::atan2(0, 1) + noise[0];
+      ::rl::math::Real stepX = ::std::cos(angle) * distance;
+      ::rl::math::Real stepY = ::std::sin(angle) * distance;
+
+      q[0] = q1[0] + stepX;
+      q[1] = q1[1] + stepY;
     }
 
     void

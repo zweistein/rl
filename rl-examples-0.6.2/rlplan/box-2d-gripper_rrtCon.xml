@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rlplan xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="rlplan.xsd">
-  <pcRrt>
-    <duration>300</duration>
+  <rrtCon>
+    <duration>600</duration>
     <goal>
       <q>0.1</q>
       <q>0.0</q>
@@ -93,13 +93,13 @@
       <q>0.2</q>
     </motionError>
     <initialError>
-      <q>0.1</q>
-      <q>0.1</q>
+      <q>0.0</q>
+      <q>0.0</q>
     </initialError>
     <goalEpsilon>0.05</goalEpsilon>
-    <!-- <useMotionError/> -->
+    <useMotionError/>
     <uniformSampler>
       <seed>1</seed>
     </uniformSampler>
-  </pcRrt>
+  </rrtCon>
 </rlplan>

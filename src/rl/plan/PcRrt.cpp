@@ -172,9 +172,12 @@ namespace rl
         bool doSlide = doSlideDistr(*this->gen) > 70;
         // sample[...]Particles will return false if the particle set is not useful
         bool sampleResult = false;
+        // sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, false, particles);
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
         {
-          sampleResult = this->sampleSlidingParticles(false, n, chosenSample, this->nrParticles, particles);
+          boost::random::uniform_int_distribution<> doGuardedDistr(0, 100);
+          bool guarded = doGuardedDistr(*this->gen) < 101;
+          sampleResult = this->sampleSlidingParticles(guarded, n, chosenSample, this->nrParticles, particles);
           //          sampleResult = this->sampleConnectParticles(n, *goal, this->nrParticles, false, particles);
         }
         else if (doGuardedMove)
@@ -226,12 +229,15 @@ namespace rl
             {
               ::boost::shared_ptr<GaussianState> goalState = ::boost::make_shared<GaussianState>(goalParticles);
 
-              ::rl::math::Real maxError = 0;
+              ::rl::math::Real maxError = 0.0;
+              ::rl::math::Real errorSum = 0.0;
               for(int i=0; i<goalParticles.size(); i++)
               {
                 this->model->setPosition(goalParticles[i].config);
                 this->model->updateFrames();
-                maxError = std::max(maxError,::rl::math::transform::distance(goalT, this->model->forwardPosition(), 0.0));
+                ::rl::math::Real dist = ::rl::math::transform::distance(goalT, this->model->forwardPosition(), 0.0);
+                maxError = std::max(maxError, dist);
+                errorSum += dist;
               }
 
               std::cout << "reached goal with error: " << maxError << " (max allowed: " << this->goalEpsilon << ")" << std::endl;
@@ -240,6 +246,8 @@ namespace rl
               {
                 // visualize goal connect step
                 this->drawParticles(goalParticles);
+
+
                 Gaussian g = goalState->configGaussian();
                 this->drawEigenvectors(g, 1.0);
                 // add goal connect step to tree
@@ -247,6 +255,12 @@ namespace rl
                 this->tree[0][connected].gState = goalState;
                 this->addEdge(possibleGoal.neighbor.first, connected, this->tree[0]);
                 this->end[0] = connected;
+                
+                // some statistics
+                ::rl::math::Real avgGoalDist = errorSum / this->nrParticles;
+                std::cout << "avgGoalDist: " << avgGoalDist << std::endl;
+
+                std::cout << "num vertices: " << ::boost::num_vertices(this->tree[0]) << std::endl;
                 return true;
               }
             }
@@ -639,7 +653,7 @@ namespace rl
 
             if(collMap.size()>1)
             {
-              std::cout<<"Connect move ends in a state with two collisions - this should not happen!"<<std::endl;
+              // std::cout<<"Connect move ends in a state with two collisions - this should not happen!"<<std::endl;
               return false;
             }
 
@@ -794,7 +808,7 @@ namespace rl
 
           if(collMap.size()>1)
           {
-            std::cout<<"Guarded move ends in a state with two collisions - this should not happen!"<<std::endl;
+            // std::cout<<"Guarded move ends in a state with two collisions - this should not happen!"<<std::endl;
             return false;
           }
 
@@ -1076,7 +1090,7 @@ namespace rl
           //Project back on sliding surface
           if(!moveConfigOnSurface(newStep, slidingContact.point, slidingContact.normal_env, slidingPair, nextStepReal))
           {
-            std::cout<<"Could not project cfg on surface!!"<<std::endl;
+            // std::cout<<"Could not project cfg on surface!!"<<std::endl;
             break;
           }
 

@@ -292,56 +292,78 @@ namespace rl
 			path.push_front(*this->tree[0][i].q);
 
 			if (this->useMotionError)
-            {
-                std::cout << "Using motion error" << std::endl;
-                ::rl::math::Vector error;
-                this->model->sampleMotionError(error);
-                for(int i=0; i<this->model->getDof(); i++)
-                {
-                    std::cout << "error joint "<<i<<": " << error[i] << std::endl;
-                }
+      {
+        std::cout << "Using motion error" << std::endl;
 
-				::std::vector<::rl::math::Vector> pathVec;
-				::std::vector<::rl::math::Vector> noisyPathVec;
+        ::rl::math::Real errorSum = 0.0;
 
-				// convert list to vector for easy access
-				for (const auto& p : path)
-				{
-					pathVec.push_back(p);
+        for (int simulation = 0; simulation < this->nrParticles; ++simulation)
+        {
+	        ::rl::math::Vector error;
+	        // for(int i=0; i<this->model->getDof(); i++)
+	        // {
+	        //   std::cout << "error joint "<< i << ": " << error[i] << std::endl;
+	        // }
+
+					::std::vector<::rl::math::Vector> pathVec;
+					::std::vector<::rl::math::Vector> noisyPathVec;
+
+					// convert list to vector for easy access
+					for (const auto& p : path)
+					{
+						pathVec.push_back(p);
+					}
+
+					::rl::math::Vector initialError(this->model->getDof());
+					this->model->sampleInitialError(initialError);
+					::rl::math::Vector noisyStart(pathVec[0]);
+					for (int dim = 0; dim < this->model->getDof(); ++dim)
+					{
+						noisyStart[dim] += initialError[dim];
+					}
+
+	        this->model->sampleMotionError(error);
+	        
+					noisyPathVec.push_back(noisyStart);
+					::rl::math::Vector offset = noisyStart - pathVec[0];
+					// apply error to path
+					for (int i = 0; i < pathVec.size()-1; ++i)
+					{
+						::rl::math::Vector from = pathVec[i];
+						::rl::math::Vector to = pathVec[i+1];
+						::rl::math::Vector dir = to - from;
+
+						::rl::math::Vector noisyFrom = noisyPathVec[i];
+						::rl::math::Vector noisyTo(this->model->getDof());
+
+
+	          // for(int i=0; i<this->model->getDof(); i++)
+	          // {
+	          //   // apply noise
+	          //   // noisyTo[i] = noisyFrom[i] + (1 + error[i]) * dir[i];
+
+	          // }
+	          this->model->interpolateNoisy(from, to, 1.0, error, noisyTo);
+	          noisyTo += offset;
+						noisyPathVec.push_back(noisyTo);
+					}
+
+					// write noisy path
+					path.clear();
+					for (const auto& p : noisyPathVec)
+					{
+						path.push_back(p);
+					}
+
+					errorSum += this->model->distance(noisyPathVec[noisyPathVec.size()-1], *this->goal);
 				}
 
-				noisyPathVec.push_back(pathVec[0]);
-				// apply error to path
-				for (int i = 0; i < pathVec.size()-1; ++i)
-				{
-					::rl::math::Vector from = pathVec[i];
-					::rl::math::Vector to = pathVec[i+1];
-					::rl::math::Vector dir = to - from;
-
-					::rl::math::Vector noisyFrom = noisyPathVec[i];
-					::rl::math::Vector noisyTo(this->model->getDof());
-
-
-                    for(int i=0; i<this->model->getDof(); i++)
-                    {
-                        // apply noise
-                        noisyTo[i] = noisyFrom[i] + (1+error[i])*dir[i];
-                    }
-					noisyPathVec.push_back(noisyTo);
-				}
-
-				// write noisy path
-				path.clear();
-				for (const auto& p : noisyPathVec)
-				{
-					path.push_back(p);
-				}
-
+				::rl::math::Real avgGoalDist = errorSum / this->nrParticles;
+				std::cout << "avgGoalDist: " << avgGoalDist << '\n';
 				// write error to file
-                ::rl::math::Real error_output = this->model->distance(noisyPathVec[noisyPathVec.size()-1], *this->goal);
 				std::ofstream resultFile;
-				resultFile.open(this->getName() + std::string("_results.txt"), std::ios::out | std::ios::app);
-                resultFile << error_output << std::endl;
+				resultFile.open(this->getName() + "_results.txt", std::ios::out | std::ios::app);
+        resultFile << "avgGoalDist: " << avgGoalDist << '\n';
 			}
 		}
 		

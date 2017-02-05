@@ -93,7 +93,7 @@ Transform {
       ]
     }
     DEF boxes Inline {
-      url "gripper.wrl"
+      url "gripper-pomdp.wrl"
     }
   ]
 }

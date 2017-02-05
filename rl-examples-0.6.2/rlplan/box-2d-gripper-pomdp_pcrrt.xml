@@ -22,10 +22,10 @@
         </world>
       </kinematics>
       <model>0</model>
-      <scene href="../rlsg/box-2d-gripper.xml"/>
+      <scene href="../rlsg/box-2d-gripper-pomdp.xml"/>
     </model>
     <start>
-      <q>1.0</q>
+      <q>0.0</q>
       <q>1.5</q>
     </start>
     <viewer>
@@ -78,7 +78,7 @@
           </world>
         </kinematics>
         <model>0</model>
-        <scene href="../rlsg/box-2d-gripper.xml"/>
+        <scene href="../rlsg/box-2d-gripper-pomdp.xml"/>
       </model>
       <size>
         <height>768</height>
@@ -93,8 +93,8 @@
       <q>0.2</q>
     </motionError>
     <initialError>
-      <q>0.1</q>
-      <q>0.1</q>
+      <q>1.0</q>
+      <q>0.2</q>
     </initialError>
     <goalEpsilon>0.05</goalEpsilon>
     <!-- <useMotionError/> -->
