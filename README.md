@@ -1,6 +1,6 @@
 # Final report branch
 
-This is the version of the planner that I used to write the final report -> 80dce39d5a2688d7c185cdd2aafe20a9bc36bc9e
+This is the version of the planner that I used to write the final report -> 80dce39
 
 ## Experiments
 
