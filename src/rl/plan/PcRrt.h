@@ -57,6 +57,11 @@ namespace rl
       ::std::string getName() const;
 
       int nrParticles;
+      int slideParam;
+      int gSlideParam;
+      int gMoveParam;
+      int kNeighbors;
+
       ::rl::math::Real goalEpsilon;
       ::rl::sg::solid::Scene *solidScene;
       void getPath(VectorList& path, int i);

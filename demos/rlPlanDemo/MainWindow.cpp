@@ -1362,6 +1362,7 @@ MainWindow::load(const QString& filename)
         (*this->model->motionError)(i) = std::atof(motionError.getNodeTab(i).getContent().c_str());
     }
 
+
     rl::xml::Object initialError = path.eval("//initialError//q");
     this->initialError = boost::make_shared< rl::math::Vector >(initialError.getNodeNr());
     this->model->initialError = this->initialError.get();
@@ -1376,7 +1377,12 @@ MainWindow::load(const QString& filename)
 			pcRrt->delta *= rl::math::DEG2RAD;
 		}
 		
-		pcRrt->nrParticles = (int) path.eval("number(nrParticles)", planner.getNodeTab(0)).getFloatval(50.0f);
+		pcRrt->nrParticles = (int) path.eval("number(nrParticles)", planner.getNodeTab(0)).getFloatval(20.0f);
+		pcRrt->slideParam = (int) path.eval("number(slideParam)", planner.getNodeTab(0)).getFloatval(20.0f);
+		pcRrt->gSlideParam = (int) path.eval("number(gSlideParam)", planner.getNodeTab(0)).getFloatval(80.0f);
+		pcRrt->gMoveParam = (int) path.eval("number(gMoveParam)", planner.getNodeTab(0)).getFloatval(30.0f);
+		pcRrt->kNeighbors = (int) path.eval("number(kNeighbors)", planner.getNodeTab(0)).getFloatval(10.0f);
+
 		pcRrt->epsilon = path.eval("number(epsilon)", planner.getNodeTab(0)).getFloatval(1.0e-3f);
 		pcRrt->goalEpsilon = path.eval("number(goalEpsilon)", planner.getNodeTab(0)).getFloatval(1.0);
 
@@ -1387,6 +1393,7 @@ MainWindow::load(const QString& filename)
 		
 		pcRrt->kd = path.eval("count(bruteForce) > 0", planner.getNodeTab(0)).getBoolval() ? false : true;
 		pcRrt->useMotionError = path.eval("count(useMotionError) > 0", planner.getNodeTab(0)).getBoolval() ? true : false;
+		pcRrt->uniformInitial = path.eval("count(uniformInitial) > 0", planner.getNodeTab(0)).getBoolval() ? true : false;
 		pcRrt->sampler = this->sampler.get();
 		pcRrt->solidScene = dynamic_cast<::rl::sg::solid::Scene*>(this->scene.get());
 	}

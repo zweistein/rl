@@ -13,7 +13,7 @@ Transform {
         DEF body1 Transform {
           translation 0 1.936458e-2 0
           children [
-            DEF sensor1 Shape {
+            DEF box1 Shape {
               appearance Appearance {
                 material Material {
                   diffuseColor 1 1 0
@@ -25,7 +25,7 @@ Transform {
               }
             }
             DEF body1_6 Transform {
-              translation -0.369998 -0.296134 0
+              translation -0.369998 -0.296132 0
               scale 0.492624 1.517132 1
               children 
                 DEF sensor2 Shape {
@@ -41,8 +41,8 @@ Transform {
                 }
             }
             DEF body1_10 Transform {
-              translation -0.369998 -0.710912 0
-              scale 0.265162 0.183272 1
+              translation -0.369998 -0.710910 0
+              scale 0.265160 0.183272 1
               children 
                 DEF sensor2_13 Shape {
                   appearance Appearance {
@@ -57,7 +57,7 @@ Transform {
                 }
             }
             DEF body1_14 Transform {
-              translation 0.368420 -0.296134 0
+              translation 0.368420 -0.212034 0
               scale 0.492624 1.517132 1
               children 
                 DEF sensor2_19 Shape {
@@ -73,8 +73,8 @@ Transform {
                 }
             }
             DEF body1_18 Transform {
-              translation 0.370794 -0.710912 0
-              scale 0.265162 0.183272 1
+              translation 0.370792 -0.621796 0
+              scale 0.265160 0.183272 1
               children 
                 DEF sensor2_25 Shape {
                   appearance Appearance {

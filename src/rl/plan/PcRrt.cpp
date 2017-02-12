@@ -74,7 +74,7 @@ namespace rl
       Neighbor bestNeighbor(nullptr, ::std::numeric_limits<::rl::math::Real>::max());
 
       int tested = 0;
-      for (auto n = neighbors.begin(); n != neighbors.end() && tested < 5; ++n)
+      for (auto n = neighbors.begin(); n != neighbors.end() && tested < this->kNeighbors; ++n)
       {
         const auto& vertex = (*n).first;
         const auto& mean = tree[vertex].gState->configMean();
@@ -121,17 +121,30 @@ namespace rl
 
       ::std::vector<Particle> v;
       ::rl::math::Vector initialError(this->model->getDof());
-
-      for(int i=0; i< this->nrParticles; i++)
+      if (this->uniformInitial)
       {
-        this->model->sampleInitialError(initialError);
-        ::rl::math::Vector sample = *this->start;
-        for(int j=0; j<this->model->getDof(); j++)
+        ::boost::random::uniform_real_distribution<::rl::math::Real> initialDistr(-1.8, 1.9);
+        for (int i = 0; i < this->nrParticles; ++i)
         {
-          sample[j]+=initialError[j];
+          ::rl::math::Vector sample = *this->start;
+          sample[0] = initialDistr(*this->gen);
+          Particle p(sample);
+          v.push_back(p);
         }
-        Particle p(sample);
-        v.push_back(p);
+      }
+      else
+      {
+        for (int i = 0; i < this->nrParticles; ++i)
+        {
+          this->model->sampleInitialError(initialError);
+          ::rl::math::Vector sample = *this->start;
+          for(int j=0; j<this->model->getDof(); j++)
+          {
+            sample[j]+=initialError[j];
+          }
+          Particle p(sample);
+          v.push_back(p);          
+        }
       }
 
 
@@ -166,17 +179,17 @@ namespace rl
 
         ::std::vector<Particle> particles;
 
-        // randomly decide to do a slide or not
+        // randomly decide which action to take
         boost::random::uniform_int_distribution<> doSlideDistr(0, 100);
-        bool doGuardedMove = doSlideDistr(*this->gen) < 30;
-        bool doSlide = doSlideDistr(*this->gen) > 70;
+        bool doGuardedMove = doSlideDistr(*this->gen) < this->gMoveParam;
+        bool doSlide = doSlideDistr(*this->gen) < this->slideParam;
         // sample[...]Particles will return false if the particle set is not useful
         bool sampleResult = false;
         // sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, false, particles);
         if (doSlide && this->tree[0][n.first].gState->isInCollision())
         {
           boost::random::uniform_int_distribution<> doGuardedDistr(0, 100);
-          bool guarded = doGuardedDistr(*this->gen) < 101;
+          bool guarded = doGuardedDistr(*this->gen) < this->gSlideParam;
           sampleResult = this->sampleSlidingParticles(guarded, n, chosenSample, this->nrParticles, particles);
           //          sampleResult = this->sampleConnectParticles(n, *goal, this->nrParticles, false, particles);
         }
@@ -189,20 +202,18 @@ namespace rl
           sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, false, particles);
         }
 
-
         if (sampleResult)
         {
           // visualize particles
           //this->drawParticles(particles);
 
           ::boost::shared_ptr<GaussianState> gaussianState = ::boost::make_shared<GaussianState>(particles);
-          Gaussian g = gaussianState->configGaussian();
-          //this->drawEigenvectors(g, 1.0);
 
 //          if(particles.begin()->contacts.size()>0)
 //            this->drawSurfaceNormal(particles.begin()->contacts.begin()->point,particles.begin()->contacts.begin()->normal_env,0.1);
 
-
+          Gaussian g = gaussianState->configGaussian();
+          // this->drawEigenvectors(g, 1.0);
           // add a new vertex and edge
           VectorPtr mean = ::boost::make_shared<::rl::math::Vector>(g.mean);
           //this->viewer->drawConfiguration(g.mean);
@@ -1145,13 +1156,13 @@ namespace rl
         }
 
 
-//        // some magic number
-//        if (steps < 3)
-//        {
-//          // we did not move very far, this is considered failure
-//          this->model->resetTool();
-//          return false;
-//        }
+       // some magic number
+       if (steps < 3)
+       {
+         // we did not move very far, this is considered failure
+         this->model->resetTool();
+         return false;
+       }
 
         this->model->setPosition(nextStepReal);
         this->model->updateFrames();

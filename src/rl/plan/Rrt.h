@@ -79,6 +79,7 @@ namespace rl
 
 			/** Used for PcRrt evaluation. */
 			bool useMotionError;
+			bool uniformInitial;
 			int nrParticles;
 
 			Sampler* sampler;

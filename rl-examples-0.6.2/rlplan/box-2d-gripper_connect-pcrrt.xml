@@ -4,7 +4,7 @@
     <duration>300</duration>
     <goal>
       <q>0.1</q>
-      <q>-1.6</q>
+      <q>-0.1</q>
     </goal>
     <model>
       <kinematics href="../rlkin/box-2d-050505.xml">
@@ -22,11 +22,11 @@
         </world>
       </kinematics>
       <model>0</model>
-      <scene href="../rlsg/box-2d-gripper-pomdp.xml"/>
+      <scene href="../rlsg/box-2d-gripper.xml"/>
     </model>
     <start>
-      <q>0.0</q>
-      <q>-0.5</q>
+      <q>1.0</q>
+      <q>1.5</q>
     </start>
     <viewer>
       <background>
@@ -78,7 +78,7 @@
           </world>
         </kinematics>
         <model>0</model>
-        <scene href="../rlsg/box-2d-gripper-pomdp.xml"/>
+        <scene href="../rlsg/box-2d-gripper.xml"/>
       </model>
       <size>
         <height>768</height>
@@ -88,23 +88,22 @@
     </viewer>
     <delta>0.01</delta>
     <nrParticles>10</nrParticles>
-    <slideParam>80</slideParam>
+    <slideParam>0</slideParam>
     <gSlideParam>80</gSlideParam>
-    <gMoveParam>30</gMoveParam>
-    <kNeighbors>10</kNeighbors>
+    <gMoveParam>0</gMoveParam>
+    <kNeighbors>5</kNeighbors>
     <motionError>
       <q>0.05</q>
       <q>0.2</q>
     </motionError>
-    <uniformInitial/>
     <initialError>
-      <q>1.0</q>
-      <q>0.2</q>
+      <q>0.0</q>
+      <q>0.0</q>
     </initialError>
     <goalEpsilon>0.05</goalEpsilon>
     <!-- <useMotionError/> -->
     <uniformSampler>
-      <seed>1</seed>
+      <seed>2</seed>
     </uniformSampler>
   </pcRrt>
 </rlplan>
