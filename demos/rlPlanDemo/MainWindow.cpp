@@ -238,9 +238,15 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags f) :
 	QRegExp waitRegExp("--disable-wait");
 	QRegExp widthRegExp("--width=(\\d*)");
 	QRegExp quitRegExp("--enable-quit");
+  QRegExp gammaRegExp("--gamma=((\\d*[.])?\\d+)");
+  QRegExp sigmaRegExp("--sigma=((\\d*[.])?\\d+)");
 	
 	int width = 1024;
 	int height = 768;
+
+  this->cerrt_gamma = -1.0;
+  this->cerrt_sigma = -1.0;
+
 	
 	for (int i = 1; i < QApplication::arguments().size(); ++i)
 	{
@@ -270,6 +276,14 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags f) :
 		{
 			width = widthRegExp.cap(1).toInt();
 		}
+    else if (-1 != gammaRegExp.indexIn(QApplication::arguments()[i]))
+    {
+      this->cerrt_gamma = gammaRegExp.cap(1).toDouble();
+    }
+    else if (-1 != sigmaRegExp.indexIn(QApplication::arguments()[i]))
+    {
+      this->cerrt_sigma = sigmaRegExp.cap(1).toDouble();
+    }
 		else if (-1 != quitRegExp.indexIn(QApplication::arguments()[i]))
 		{
 			this->thread->quit = true;
@@ -1360,6 +1374,8 @@ MainWindow::load(const QString& filename)
     for (int i = 0; i < motionError.getNodeNr(); ++i)
     {
         (*this->model->motionError)(i) = std::atof(motionError.getNodeTab(i).getContent().c_str());
+        if(this->cerrt_sigma >= 0)
+         (*this->model->motionError)(i) = this->cerrt_sigma;
     }
 
     rl::xml::Object initialError = path.eval("//initialError//q");
@@ -1376,7 +1392,12 @@ MainWindow::load(const QString& filename)
 			pcRrt->delta *= rl::math::DEG2RAD;
 		}
 		
-		pcRrt->nrParticles = (int) path.eval("number(nrParticles)", planner.getNodeTab(0)).getFloatval(50.0f);
+    pcRrt->nrParticles = (int) path.eval("number(nrParticles)", planner.getNodeTab(0)).getFloatval(20.0f);
+    pcRrt->gamma = path.eval("number(gamma)", planner.getNodeTab(0)).getFloatval(0.5f);
+
+    if(this->cerrt_gamma >= 0)
+      pcRrt->gamma = this->cerrt_gamma;
+
 		pcRrt->epsilon = path.eval("number(epsilon)", planner.getNodeTab(0)).getFloatval(1.0e-3f);
 		pcRrt->goalEpsilon = path.eval("number(goalEpsilon)", planner.getNodeTab(0)).getFloatval(1.0);
 

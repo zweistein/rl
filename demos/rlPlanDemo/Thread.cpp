@@ -206,7 +206,7 @@ Thread::run()
 	if (std::ifstream::traits_type::eof() == peek)
 	{
 		benchmark.clear();
-		benchmark << "Date,Time,Solved,Planner,Robot,Vertices,Edges,Total CD,Free CD,Exploration Duration (s),Duration (s), Path Length" << std::endl;
+    benchmark << "Date,Time,Solved,Planner,Robot,Vertices,Edges,Total CD,Free CD,Exploration Duration (s),Duration (s), Path Length, gamma, sigma" << std::endl;
 	}
 	else
 	{
@@ -261,6 +261,16 @@ Thread::run()
 	
 	benchmark << ",";
 	benchmark << timer.elapsed();
+
+  if (rl::plan::PcRrt* pcRrt = dynamic_cast< rl::plan::PcRrt* >(MainWindow::instance()->planner.get()))
+  {
+    benchmark << ","<< pcRrt->gamma<<","<<(*pcRrt->model->motionError)(0);
+  }
+  else
+  {
+    benchmark << ",0,0";
+  }
+
 	
 	rl::plan::VectorList path;
 	

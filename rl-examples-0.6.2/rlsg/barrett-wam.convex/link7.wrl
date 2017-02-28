@@ -3,7 +3,37 @@
 
 DEF link7 Transform {
   translation 0 0 -0.0060000001
-  children 
+  children [
+
+
+Transform {
+ translation 0 0 0.029
+ rotation 1 0 0 1.57
+ children 
+  Shape {
+    geometry Cylinder {
+        height 0.052
+        radius 0.043
+    }
+  appearance Appearance {
+   material Material {}
+  }
+ }
+}
+
+Transform {
+ translation -0.05 0.03 0.02
+ rotation 0 0 1 0.7
+ children 
+  Shape {
+    geometry Box {
+        size 0.08 0.03 0.02
+    }
+  appearance Appearance {
+   material Material {}
+  }
+ }
+}
 
 
 Transform {
@@ -17,7 +47,7 @@ Transform {
  }
 }
 
-
+]
 
 #Transform {
 # translation 0 0 0.15

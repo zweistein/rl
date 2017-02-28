@@ -121,6 +121,9 @@ public:
 	boost::shared_ptr< rl::plan::Verifier > verifier2;
 	
 	Viewer* viewer;
+
+  double cerrt_gamma;
+  double cerrt_sigma;
 	
 public slots:
 	void eval();

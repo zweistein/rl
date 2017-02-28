@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rlplan xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="rlplan.xsd">
   <pcRrt>
-    <duration>600</duration>
+    <duration>300</duration>
     <goal>
       <q>0.1</q>
-      <q>0.0</q>
+      <q>-0.1</q>
     </goal>
     <model>
       <kinematics href="../rlkin/box-2d-050505.xml">
@@ -25,7 +25,7 @@
       <scene href="../rlsg/box-2d-gripper.xml"/>
     </model>
     <start>
-      <q>0.0</q>
+      <q>1.0</q>
       <q>1.5</q>
     </start>
     <viewer>
@@ -88,18 +88,22 @@
     </viewer>
     <delta>0.01</delta>
     <nrParticles>10</nrParticles>
+    <slideParam>20</slideParam>
+    <gSlideParam>80</gSlideParam>
+    <gMoveParam>30</gMoveParam>
+    <kNeighbors>5</kNeighbors>
     <motionError>
-      <q>0.2</q>
+      <q>0.05</q>
       <q>0.2</q>
     </motionError>
     <initialError>
-      <q>0.8</q>
-      <q>0.4</q>
+      <q>0.1</q>
+      <q>0.1</q>
     </initialError>
     <goalEpsilon>0.05</goalEpsilon>
     <!-- <useMotionError/> -->
     <uniformSampler>
-      <seed>1</seed>
+      <seed>2</seed>
     </uniformSampler>
   </pcRrt>
 </rlplan>

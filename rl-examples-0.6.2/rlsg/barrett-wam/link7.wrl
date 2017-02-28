@@ -4,6 +4,21 @@ DEF link7 Transform {
   translation 0.000000 0.000000 -0.006000
   children [
   Transform {
+ translation 0 0 0.027
+ rotation 1 0 0 1.57
+ children Shape {
+    geometry Cylinder {
+        height 0.048
+        radius 0.043
+    }
+  appearance Appearance {
+   material Material {}
+  }
+ }
+}
+  
+  
+  Transform {
  translation 0 0 0.14
  children Shape {
   geometry Sphere { radius 0.025 }

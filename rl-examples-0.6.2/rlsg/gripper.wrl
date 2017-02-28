@@ -101,7 +101,7 @@ DEF room2 Transform {
     }
     DEF box1_7 Transform {
       translation 2.950608e-3 -0.746290 0.500000
-      scale 0.135132 0.507524 1
+      scale 0.135130 0.507524 1
       children 
         Shape {
           appearance Appearance {
@@ -113,6 +113,19 @@ DEF room2 Transform {
           }
         }
     }
-   
+    DEF box1_4 Transform {
+      translation 0.972154 0.578076 0.500000
+      children 
+        Shape {
+          appearance Appearance {
+            material Material {
+            }
+          }
+          geometry Box {
+            size 3.961926 4.233840e-2 0.890268
+          }
+        }
+    }
   ]
 }
+

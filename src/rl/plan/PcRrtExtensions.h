@@ -115,6 +115,8 @@ namespace rl
     class GaussianState
     {
     public:
+      GaussianState(){}
+
       GaussianState(const ::std::vector<Particle>& particles, const ::rl::math::Vector3 normal = ::rl::math::Vector3()) :
       gen(42),
       particles(particles),

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rlplan xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="rlplan.xsd">
   <pcRrt>
-    <duration>600</duration>
+    <duration>300</duration>
     <goal>
-      <q>1.7</q>
-      <q>-1.1</q>
+      <q>0.08</q>
+      <q>-1.65</q>
     </goal>
     <model>
       <kinematics href="../rlkin/box-2d-050505.xml">
@@ -22,17 +22,17 @@
         </world>
       </kinematics>
       <model>0</model>
-      <scene href="../rlsg/box-2d-narrow-region.xml"/>
+      <scene href="../rlsg/box-2d-gripper-pomdp.xml"/>
     </model>
     <start>
-      <q>1.0</q>
-      <q>1.5</q>
+      <q>0.0</q>
+      <q>-0.7</q>
     </start>
     <viewer>
       <background>
-        <r>0</r>
-        <g>0</g>
-        <b>0</b>
+        <r>1</r>
+        <g>1</g>
+        <b>1</b>
       </background>
       <camera>
         <orthographic/>
@@ -44,7 +44,7 @@
         </position>
         <scale>1</scale>
         <target>
-          <x>14</x>
+          <x>14</x>0.12
           <y>12</y>
           <z>0</z>
         </target>
@@ -78,7 +78,7 @@
           </world>
         </kinematics>
         <model>0</model>
-        <scene href="../rlsg/box-2d-narrow-region.xml"/>
+        <scene href="../rlsg/box-2d-gripper-pomdp.xml"/>
       </model>
       <size>
         <height>768</height>
@@ -87,18 +87,17 @@
       <wait/>
     </viewer>
     <delta>0.005</delta>
-    <nrParticles>20</nrParticles>
+    <nrParticles>10</nrParticles>
+    <gamma>0.5</gamma>
     <motionError>
-      <q>0.1</q>
-      <q>0.1</q>
+      <q>0.05</q>
+      <q>0.05</q>
     </motionError>
     <initialError>
-      <q>0.1</q>
-      <q>0.1</q>
+      <q>0.3</q>
+      <q>0.3</q>
     </initialError>
-    <gamma>0.5</gamma>
-    <goalEpsilon>0.1</goalEpsilon>
-    <!-- <useMotionError/> -->
+    <goalEpsilon>0.05</goalEpsilon>
     <uniformSampler>
       <seed>1</seed>
     </uniformSampler>

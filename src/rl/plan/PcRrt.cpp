@@ -28,11 +28,15 @@ namespace rl
     }
 
     PcRrt::PcRrt() :
-      Rrt()
+      Rrt(),
+      nrParticles(20),
+      gamma(0.5)
     {
       // comment in for random seed
-      // this->gen = ::boost::make_shared<boost::random::mt19937>(std::time(0));
-      this->gen = ::boost::make_shared<boost::random::mt19937>(44);
+      int seed = std::time(0);
+      this->gen = ::boost::make_shared<boost::random::mt19937>(seed);
+      std::cout<<"seed: "<<seed<<std::endl;
+      //this->gen = ::boost::make_shared<boost::random::mt19937>(44);
     }
 
     //Needed for Guarded moves
@@ -53,7 +57,7 @@ namespace rl
       }
     }
 
-    PcRrt::Neighbor PcRrt::nearest(const Tree& tree, const ::rl::math::Vector& chosen)
+    PcRrt::Neighbor PcRrt::nearest(const Tree& tree, const ::rl::math::Vector& chosen, double& directionSigma)
     {
       struct NeighborCompare
       {
@@ -73,9 +77,8 @@ namespace rl
 
       Neighbor bestNeighbor(nullptr, ::std::numeric_limits<::rl::math::Real>::max());
 
-      //TODO:: Not sure what is the use of the below code
       int tested = 0;
-      for (auto n = neighbors.begin(); n != neighbors.end() && tested < 5; ++n)
+      for (auto n = neighbors.begin(); n != neighbors.end() && tested < 10; ++n)
       {
         const auto& vertex = (*n).first;
         const auto& mean = tree[vertex].gState->configMean();
@@ -100,11 +103,19 @@ namespace rl
         }
 
         GaussianState g(movedParticles);
-        ::rl::math::Real metric =  g.configGaussian().eigenvalues().sum();
+        ::rl::math::Real distanceMetric =  this->gamma*g.configGaussian().eigenvalues().sum();
+        ::rl::math::Real uncertaintyMetric =  g.configGaussian().covariance.trace();
+        ::rl::math::Real metric =  this->gamma * uncertaintyMetric + (1.0 - this->gamma) * distanceMetric;
         if (metric < bestNeighbor.second)
         {
           bestNeighbor.first = vertex;
           bestNeighbor.second = metric;
+          rl::math::Vector dir = chosen-g.configMean();
+          dir.normalize();
+          //Mahalanobis distance squared
+          //Eigen::LLT<Eigen::MatrixXd> lltOfG(g.configCovariance());
+
+          //directionSigma = dir.transpose()*lltOfG.solve(dir);
         }
 
         tested++;
@@ -143,6 +154,9 @@ namespace rl
 
       }
 
+
+
+
       this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(v);
       this->model->setPosition(*this->start);
       this->model->updateFrames();
@@ -170,33 +184,50 @@ namespace rl
         else
           this->choose(chosenSample);
 
+        double directionSigma;
+        Neighbor n = this->nearest(this->tree[0], chosenSample, directionSigma);
 
-        Neighbor n = this->nearest(this->tree[0], chosenSample);
         Vertex chosenVertex = n.first;
 
         ::std::vector<Particle> particles;
         ::rl::math::Vector3 slidingNormal;
         slidingNormal.setZero();
 
-        // randomly decide to do a slide or not
-        boost::random::uniform_int_distribution<> doSlideDistr(0, 100);
-        bool doGuardedMove = doSlideDistr(*this->gen) < 30;
-        bool doSlide = doSlideDistr(*this->gen) > 50;
+
+
+
         // sample[...]Particles will return false if the particle set is not useful
         bool sampleResult = false;
 
-        if (doSlide)
+
+        if( this->tree[0][n.first].gState->isInCollision())
         {
-          if( this->tree[0][n.first].gState->isInCollision())
-            sampleResult = this->sampleSlidingParticles(false, n, chosenSample, this->nrParticles, particles, slidingNormal);
-        }
-        else if (doGuardedMove)
-        {
-          sampleResult = this->sampleGuardedParticles(n, chosenSample, this->nrParticles, particles);
+          // randomly decide to do a slide or not
+          boost::random::uniform_01<boost::random::mt19937> doSlideDistr(*this->gen);
+          //double val = doSlideDistr()/(sqrt(directionSigma)*this->goalEpsilon);
+          bool doSlide = doSlideDistr() < this->gamma;
+          //std::cout<<"doslide "<<val<<std::endl;
+
+          if (doSlide)
+          {
+            bool doGuardedSlide = doSlideDistr() < this->gamma;
+            sampleResult = this->sampleSlidingParticles(doGuardedSlide, n, chosenSample, this->nrParticles, particles, slidingNormal);
+          }
+          else
+            sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, false, particles);
         }
         else
         {
-          sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, false, particles);
+          // randomly decide to do a slide or not
+          boost::random::uniform_01<boost::random::mt19937> doGuardDistr(*this->gen);
+          //double val = doGuardDistr()/(sqrt(directionSigma)*this->goalEpsilon);
+          bool doGuardedMove = doGuardDistr() < this->gamma;
+          //std::cout<<"doguard "<<val<<std::endl;
+
+          if (doGuardedMove)
+            sampleResult = this->sampleGuardedParticles(n, chosenSample, this->nrParticles, particles);
+          else
+            sampleResult = this->sampleConnectParticles(n, chosenSample, this->nrParticles, false, particles);
         }
 
 
@@ -212,8 +243,9 @@ namespace rl
 //          if(particles.begin()->contacts.size()>0)
 //            this->drawSurfaceNormal(particles.begin()->contacts.begin()->point,particles.begin()->contacts.begin()->normal_env,0.1);
 
+
           //std::cout<<g.eigenvalues().sum()<<std::endl;
-          if(g.eigenvalues().sum()<0.1)
+          //if(g.eigenvalues().sum()<0.1)
           {
           // add a new vertex and edge
           VectorPtr mean = ::boost::make_shared<::rl::math::Vector>(g.mean);
@@ -226,6 +258,25 @@ namespace rl
           this->tree[0][newVertex].t = ::boost::make_shared<::rl::math::Transform>(this->model->forwardPosition());
 
           this->addEdge(chosenVertex, newVertex, this->tree[0]);
+
+          ::rl::math::Real maxError = 0;
+          for(int i=0; i<particles.size(); i++)
+          {
+            this->model->setPosition(particles[i].config);
+            this->model->updateFrames();
+            maxError = std::max(maxError,::rl::math::transform::distance(goalT, this->model->forwardPosition(), 0.0));
+          }
+
+          //std::cout << "reached goal with error: " << maxError << " (max allowed: " << this->goalEpsilon << ")" << std::endl;
+
+          if (maxError < this->goalEpsilon)
+          {
+            // visualize goal connect step
+            this->drawParticles(particles);
+            this->end[0] = newVertex;
+            return true;
+          }
+
 
           // try to connect to goal
           Neighbor nearest;
@@ -259,7 +310,6 @@ namespace rl
                 // visualize goal connect step
                 this->drawParticles(goalParticles);
                 Gaussian g = goalState->configGaussian();
-                this->drawEigenvectors(g, 1.0);
                 // add goal connect step to tree
                 Vertex connected = this->addVertex(this->tree[0], possibleGoal.q);
                 this->tree[0][connected].gState = goalState;
@@ -546,7 +596,7 @@ namespace rl
 
         if(gs->isSlidingMove())
         {
-          path_ss<<gs->getSlidingNormal()(0)<<"\t"<<gs->getSlidingNormal()(1)<<"\t"<<gs->getSlidingNormal()(2);
+          path_ss<<gs->getSlidingNormal()(0)<<"\t"<<gs->getSlidingNormal()(1)<<"\t"<<gs->getSlidingNormal()(2)<<"\t";
         }
         else
         {
@@ -555,13 +605,13 @@ namespace rl
 
         ::rl::math::Transform ee_t = *(this->tree[0][*it].t);
         ::rl::math::Quaternion q(ee_t.linear());
-        path_ss<<ee_t(0,3)<<" "<<ee_t(1,3)<<" "<<ee_t(2,3)<<" "<< q.x()<<"\t"<<q.y()<<"\t"<<q.z()<<"\t"<<q.w();
+        path_ss<<ee_t(0,3)<<"\t"<<ee_t(1,3)<<"\t"<<ee_t(2,3)<<"\t"<< q.x()<<"\t"<<q.y()<<"\t"<<q.z()<<"\t"<<q.w();
         path_ss<<std::endl;
 
 
       }
       path_string = path_ss.str();
-      std::cout<<path_string<<std::endl;
+      //std::cout<<path_string<<std::endl;
     }
 
     bool PcRrt::isEqualCollisionState(::rl::sg::solid::Scene::CollisionMap& first, ::rl::sg::solid::Scene::CollisionMap& second)
@@ -708,7 +758,7 @@ namespace rl
 
             if(collMap.size()>1)
             {
-              std::cout<<"Connect move ends in a state with two collisions - this should not happen!"<<std::endl;
+              //std::cout<<"Connect move ends in a state with two collisions - this should not happen!"<<std::endl;
               return false;
             }
 
@@ -771,7 +821,7 @@ namespace rl
       this->model->setPosition(this->tree[0][nearest.first].gState->configMean());
       this->model->updateFrames();
       ::rl::math::Vector3 initPoint = this->model->forwardPosition().translation();
-#define RANDOM_DIRECTION
+//#define RANDOM_DIRECTION
 #ifdef RANDOM_DIRECTION
       ::rl::math::Vector dir(this->model->getDof());
       sampleDirection(dir);
@@ -863,7 +913,7 @@ namespace rl
 
           if(collMap.size()>1)
           {
-            std::cout<<"Guarded move ends in a state with two collisions - this should not happen!"<<std::endl;
+            //std::cout<<"Guarded move ends in a state with two collisions - this should not happen!"<<std::endl;
             return false;
           }
 
@@ -1123,7 +1173,7 @@ namespace rl
           //Project back on sliding surface
           if(!moveConfigOnSurface(newStep, slidingContact.point, slidingContact.normal_env, slidingPair, nextStepReal))
           {
-            std::cout<<"Could not project cfg on surface!!"<<std::endl;
+            //std::cout<<"Could not project cfg on surface!!"<<std::endl;
             break;
           }
 
@@ -1291,7 +1341,8 @@ namespace rl
           for (int j = 0; j < particles[i].contacts.size(); ++j)
           {
             opPos = particles[i].contacts[j].point;
-            this->viewer->drawSphere(opPos, 0.02);
+            if(this->viewer)
+              this->viewer->drawSphere(opPos, 0.02);
           }
         }
         else
@@ -1303,7 +1354,8 @@ namespace rl
           opPos[0] = t.translation().x();
           opPos[1] = t.translation().y();
           opPos[2] = t.translation().z();
-          this->viewer->drawSphere(opPos, 0.02);
+          if(this->viewer)
+            this->viewer->drawSphere(opPos, 0.02);
         }
 
       }
