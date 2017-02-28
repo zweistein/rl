@@ -73,6 +73,7 @@ namespace rl
 
       Neighbor bestNeighbor(nullptr, ::std::numeric_limits<::rl::math::Real>::max());
 
+      //TODO:: Not sure what is the use of the below code
       int tested = 0;
       for (auto n = neighbors.begin(); n != neighbors.end() && tested < 5; ++n)
       {
@@ -141,9 +142,6 @@ namespace rl
         v.push_back(p);
 
       }
-
-
-
 
       this->tree[0][this->begin[0]].gState = ::boost::make_shared<GaussianState>(v);
       this->model->setPosition(*this->start);

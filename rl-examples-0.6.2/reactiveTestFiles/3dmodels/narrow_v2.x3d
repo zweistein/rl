@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 3.0//EN" "http://www.web3d.org/specifications/x3d-3.0.dtd">
+<X3D version="3.0" profile="Immersive" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="http://www.web3d.org/specifications/x3d-3.0.xsd">
+	<head>
+		<meta name="filename" content="narrow_v2.x3d" />
+		<meta name="generator" content="Blender 2.69 (sub 0)" />
+	</head>
+	<Scene>
+		<NavigationInfo headlight="false"
+		                visibilityLimit="0.0"
+		                type='"EXAMINE", "ANY"'
+		                avatarSize="0.25, 1.75, 0.75"
+		                />
+		<Background DEF="WO_World"
+		            groundColor="0.051 0.051 0.051"
+		            skyColor="0.051 0.051 0.051"
+		            />
+		<Transform DEF="obsWallV_TRANSFORM"
+		           translation="-0.013078 1.055061 0.515218"
+		           scale="1.000000 1.000000 1.000000"
+		           rotation="-0.000000 0.000000 -1.000000 2.391295"
+		           >
+			<Transform DEF="obsWallV_ifs_TRANSFORM"
+			           translation="0.000000 0.000000 -0.000000"
+			           scale="1.000000 1.000000 1.000000"
+			           rotation="-0.000000 0.000000 0.000000 0.000000"
+			           >
+				<Group DEF="group_ME_ShapeBox_006">
+					<Shape>
+						<Appearance>
+							<Material DEF="MA_Shape_006"
+							          diffuseColor="0.800 0.800 0.800"
+							          specularColor="0.000 0.000 0.000"
+							          emissiveColor="0.000 0.000 0.000"
+							          ambientIntensity="0.067"
+							          shininess="0.201"
+							          transparency="0.0"
+							          />
+						</Appearance>
+						<IndexedFaceSet solid="true"
+						                coordIndex="1 0 4 5 -1 5 6 2 1 -1 6 7 3 2 -1 0 3 7 4 -1 0 1 2 3 -1 7 6 5 4 -1 "
+						                >
+							<Coordinate DEF="coords_ME_ShapeBox_006"
+							            point="-1.359927 0.422230 -0.548345 -1.359927 0.468849 -0.548345 0.468849 0.468849 -0.548346 0.468849 0.422230 -0.548346 -1.359927 0.422230 0.548345 -1.359927 0.468849 0.548345 0.468849 0.468849 0.548345 0.468849 0.422230 0.548345 0.468848 -1.359927 -0.548344 0.422229 -1.359927 -0.548344 0.422230 0.468848 -0.548345 0.468849 0.468848 -0.548345 0.468848 -1.359927 0.548346 0.422229 -1.359927 0.548346 0.422230 0.468849 0.548345 0.468849 0.468849 0.548345 "
+							            />
+						</IndexedFaceSet>
+					</Shape>
+					<Shape>
+						<Appearance>
+							<Material DEF="MA_Shape_010"
+							          diffuseColor="0.800 0.800 0.800"
+							          specularColor="0.000 0.000 0.000"
+							          emissiveColor="0.000 0.000 0.000"
+							          ambientIntensity="0.067"
+							          shininess="0.201"
+							          transparency="0.0"
+							          />
+						</Appearance>
+						<IndexedFaceSet solid="true"
+						                coordIndex="12 13 9 8 -1 13 14 10 9 -1 14 15 11 10 -1 15 12 8 11 -1 8 9 10 11 -1 15 14 13 12 -1 "
+						                >
+							<Coordinate USE="coords_ME_ShapeBox_006" />
+						</IndexedFaceSet>
+					</Shape>
+				</Group>
+			</Transform>
+		</Transform>
+		<Transform DEF="wallLS1_TRANSFORM"
+		           translation="2.549998 0.000000 0.500000"
+		           scale="1.000000 1.000000 1.000000"
+		           rotation="0.000000 0.000000 -0.000000 0.000000"
+		           >
+			<Transform DEF="wallLS1_ifs_TRANSFORM"
+			           translation="-0.000000 0.000000 -0.000000"
+			           scale="1.000000 1.000000 1.000000"
+			           rotation="1.000000 0.000000 0.000000 0.000000"
+			           >
+				<Group DEF="group_ME_ShapeBox_005">
+					<Shape>
+						<Appearance>
+							<Material DEF="MA_Shape_005"
+							          diffuseColor="0.800 0.800 0.800"
+							          specularColor="0.000 0.000 0.000"
+							          emissiveColor="0.000 0.000 0.000"
+							          ambientIntensity="0.067"
+							          shininess="0.201"
+							          transparency="0.5"
+							          />
+						</Appearance>
+						<IndexedFaceSet solid="true"
+						                coordIndex="1 0 4 5 -1 5 6 2 1 -1 6 7 3 2 -1 0 3 7 4 -1 0 1 2 3 -1 7 6 5 4 -1 "
+						                >
+							<Coordinate DEF="coords_ME_ShapeBox_005"
+							            point="-0.050000 -2.500000 -0.500000 -0.050000 2.500000 -0.500000 0.050000 2.500000 -0.500000 0.050000 -2.500000 -0.500000 -0.050000 -2.500000 0.500000 -0.050000 2.500000 0.500000 0.050000 2.500000 0.500000 0.050000 -2.500000 0.500000 "
+							            />
+						</IndexedFaceSet>
+					</Shape>
+				</Group>
+			</Transform>
+		</Transform>
+		<Transform DEF="wallLs2_TRANSFORM"
+		           translation="-2.549998 0.000000 0.500000"
+		           scale="1.000000 1.000000 1.000000"
+		           rotation="0.000000 0.000000 -0.000000 0.000000"
+		           >
+			<Transform DEF="wallLs2_ifs_TRANSFORM"
+			           translation="-0.000000 -0.000000 -0.000000"
+			           scale="1.000000 1.000000 1.000000"
+			           rotation="1.000000 0.000000 0.000000 0.000000"
+			           >
+				<Group DEF="group_ME_ShapeBox_004">
+					<Shape>
+						<Appearance>
+							<Material DEF="MA_Shape_004"
+							          diffuseColor="0.800 0.800 0.800"
+							          specularColor="0.000 0.000 0.000"
+							          emissiveColor="0.000 0.000 0.000"
+							          ambientIntensity="0.067"
+							          shininess="0.201"
+							          transparency="0.5"
+							          />
+						</Appearance>
+						<IndexedFaceSet solid="true"
+						                coordIndex="1 0 4 5 -1 5 6 2 1 -1 6 7 3 2 -1 0 3 7 4 -1 0 1 2 3 -1 7 6 5 4 -1 "
+						                >
+							<Coordinate DEF="coords_ME_ShapeBox_004"
+							            point="-0.050000 -2.500000 -0.500000 -0.050000 2.500000 -0.500000 0.050000 2.500000 -0.500000 0.050000 -2.500000 -0.500000 -0.050000 -2.500000 0.500000 -0.050000 2.500000 0.500000 0.050000 2.500000 0.500000 0.050000 -2.500000 0.500000 "
+							            />
+						</IndexedFaceSet>
+					</Shape>
+				</Group>
+			</Transform>
+		</Transform>
+		<Transform DEF="wallSS1_TRANSFORM"
+		           translation="0.000000 -2.549998 0.500000"
+		           scale="1.000000 1.000000 1.000000"
+		           rotation="0.000000 0.000000 -0.000000 0.000000"
+		           >
+			<Transform DEF="wallSS1_ifs_TRANSFORM"
+			           translation="0.000000 0.000000 -0.000000"
+			           scale="1.000000 1.000000 1.000000"
+			           rotation="1.000000 0.000000 0.000000 0.000000"
+			           >
+				<Group DEF="group_ME_ShapeBox_003">
+					<Shape>
+						<Appearance>
+							<Material DEF="MA_Shape_003"
+							          diffuseColor="0.800 0.800 0.800"
+							          specularColor="0.000 0.000 0.000"
+							          emissiveColor="0.000 0.000 0.000"
+							          ambientIntensity="0.067"
+							          shininess="0.201"
+							          transparency="0.5"
+							          />
+						</Appearance>
+						<IndexedFaceSet solid="true"
+						                coordIndex="1 0 4 5 -1 5 6 2 1 -1 6 7 3 2 -1 0 3 7 4 -1 0 1 2 3 -1 7 6 5 4 -1 "
+						                >
+							<Coordinate DEF="coords_ME_ShapeBox_003"
+							            point="-2.599997 -0.050000 -0.500000 -2.599997 0.050000 -0.500000 2.599997 0.050000 -0.500000 2.599997 -0.050000 -0.500000 -2.599997 -0.050000 0.500000 -2.599997 0.050000 0.500000 2.599997 0.050000 0.500000 2.599997 -0.050000 0.500000 "
+							            />
+						</IndexedFaceSet>
+					</Shape>
+				</Group>
+			</Transform>
+		</Transform>
+		<Transform DEF="wallSS2_TRANSFORM"
+		           translation="0.000000 2.549998 0.500000"
+		           scale="1.000000 1.000000 1.000000"
+		           rotation="0.000000 0.000000 -0.000000 0.000000"
+		           >
+			<Transform DEF="wallSS2_ifs_TRANSFORM"
+			           translation="0.000000 0.000000 0.000000"
+			           scale="1.000000 1.000000 1.000000"
+			           rotation="1.000000 0.000000 0.000000 0.000000"
+			           >
+				<Group DEF="group_ME_ShapeBox_002">
+					<Shape>
+						<Appearance>
+							<Material DEF="MA_Shape_002"
+							          diffuseColor="0.800 0.800 0.800"
+							          specularColor="0.000 0.000 0.000"
+							          emissiveColor="0.000 0.000 0.000"
+							          ambientIntensity="0.067"
+							          shininess="0.201"
+							          transparency="0.5794701874256134"
+							          />
+						</Appearance>
+						<IndexedFaceSet solid="true"
+						                coordIndex="1 0 4 5 -1 5 6 2 1 -1 6 7 3 2 -1 0 3 7 4 -1 0 1 2 3 -1 7 6 5 4 -1 "
+						                >
+							<Coordinate DEF="coords_ME_ShapeBox_002"
+							            point="-2.599997 -0.050000 -0.500000 -2.599997 0.050000 -0.500000 2.599997 0.050000 -0.500000 2.599997 -0.050000 -0.500000 -2.599997 -0.050000 0.500000 -2.599997 0.050000 0.500000 2.599997 0.050000 0.500000 2.599997 -0.050000 0.500000 "
+							            />
+						</IndexedFaceSet>
+					</Shape>
+				</Group>
+			</Transform>
+		</Transform>
+		<Transform DEF="surface1_TRANSFORM"
+		           translation="0.000000 0.000000 1.000000"
+		           scale="1.000000 1.000000 1.000000"
+		           rotation="0.000000 0.000000 -0.000000 0.000000"
+		           >
+			<Transform DEF="surface1_ifs_TRANSFORM"
+			           translation="0.000000 0.000000 0.000000"
+			           scale="1.000000 1.000000 1.000000"
+			           rotation="1.000000 0.000000 0.000000 0.000000"
+			           >
+				<Group DEF="group_ME_ShapeBox_001">
+					<Shape>
+						<Appearance>
+							<Material DEF="MA_Shape_001"
+							          diffuseColor="0.800 0.800 0.800"
+							          specularColor="0.000 0.000 0.000"
+							          emissiveColor="0.000 0.000 0.000"
+							          ambientIntensity="0.067"
+							          shininess="0.201"
+							          transparency="0.7999999970197678"
+							          />
+						</Appearance>
+						<IndexedFaceSet solid="true"
+						                coordIndex="1 0 4 5 -1 5 6 2 1 -1 6 7 3 2 -1 0 3 7 4 -1 0 1 2 3 -1 7 6 5 4 -1 "
+						                >
+							<Coordinate DEF="coords_ME_ShapeBox_001"
+							            point="-2.599997 -2.599997 -0.050000 -2.599997 2.599997 -0.050000 2.599997 2.599997 -0.050000 2.599997 -2.599997 -0.050000 -2.599997 -2.599997 0.050000 -2.599997 2.599997 0.050000 2.599997 2.599997 0.050000 2.599997 -2.599997 0.050000 "
+							            />
+						</IndexedFaceSet>
+					</Shape>
+				</Group>
+			</Transform>
+		</Transform>
+		<Transform DEF="surface2_TRANSFORM"
+		           translation="0.000000 0.000000 0.050000"
+		           scale="1.000000 1.000000 1.000000"
+		           rotation="0.000000 0.000000 -0.000000 0.000000"
+		           >
+			<Transform DEF="surface2_ifs_TRANSFORM"
+			           translation="0.000000 0.000000 0.000000"
+			           scale="1.000000 1.000000 1.000000"
+			           rotation="1.000000 0.000000 0.000000 0.000000"
+			           >
+				<Group DEF="group_ME_ShapeBox">
+					<Shape>
+						<Appearance>
+							<Material DEF="MA_Shape"
+							          diffuseColor="0.800 0.800 0.800"
+							          specularColor="0.000 0.000 0.000"
+							          emissiveColor="0.000 0.000 0.000"
+							          ambientIntensity="0.067"
+							          shininess="0.201"
+							          transparency="0.7999999970197678"
+							          />
+						</Appearance>
+						<IndexedFaceSet solid="true"
+						                coordIndex="1 0 4 5 -1 5 6 2 1 -1 6 7 3 2 -1 0 3 7 4 -1 0 1 2 3 -1 7 6 5 4 -1 "
+						                >
+							<Coordinate DEF="coords_ME_ShapeBox"
+							            point="-2.599997 -2.599997 -0.050000 -2.599997 2.599997 -0.050000 2.599997 2.599997 -0.050000 2.599997 -2.599997 -0.050000 -2.599997 -2.599997 0.050000 -2.599997 2.599997 0.050000 2.599997 2.599997 0.050000 2.599997 -2.599997 0.050000 "
+							            />
+						</IndexedFaceSet>
+					</Shape>
+				</Group>
+			</Transform>
+		</Transform>
+		<Transform DEF="Lamp_TRANSFORM"
+		           translation="-4.076245 5.903862 1.005454"
+		           scale="1.000000 1.000000 1.000000"
+		           rotation="-0.498084 -0.762016 -0.413815 1.513875"
+		           >
+			<PointLight DEF="LA_Lamp"
+			            ambientIntensity="0.0000"
+			            color="1.0000 1.0000 1.0000"
+			            intensity="0.5714"
+			            radius="30.0000" 
+			            location="-0.0000 -0.0000 0.0000"
+			            />
+		</Transform>
+		<Transform DEF="Camera_TRANSFORM"
+		           translation="-7.481132 5.343665 -6.507640"
+		           scale="1.000000 1.000000 1.000000"
+		           rotation="-0.093039 -0.968741 -0.229967 2.347036"
+		           >
+			<Viewpoint DEF="CA_Camera"
+			           centerOfRotation="0 0 0"
+			           position="0.00 0.00 -0.00"
+			           orientation="-0.92 0.35 0.17 0.00"
+			           fieldOfView="0.858"
+			           />
+		</Transform>
+	</Scene>
+</X3D>
