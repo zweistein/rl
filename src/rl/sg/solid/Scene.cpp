@@ -208,7 +208,9 @@ namespace rl
           normalVector[0] = static_cast< ::rl::math::Real >(normal[0]);
           normalVector[1] = static_cast< ::rl::math::Real >(normal[1]);
           normalVector[2] = static_cast< ::rl::math::Real >(normal[2]);
+          //std::cout << "normal = " << normal[0] <<", " << normal[1] <<", " << normal[3] <<std::endl;
         }
+        //else {         	std::cerr << "DT_ObjectRayCast false in Scene.cpp \n";        }
 
         return DT_TRUE == success && normalVector.norm() > 0.1;
       }

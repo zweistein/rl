@@ -898,8 +898,10 @@ namespace rl
 
           //collision must be perceivable by sensor
           if(!collMap.begin()->second.isSensor)
+          {
+        	std::cout << "Collision was not perceived by sensor\n";
             return false;
-
+          }
           rl::math::Vector3 normal;
           std::string s1=collMap.begin()->first.first;
           std::string s2=collMap.begin()->first.second;
@@ -907,15 +909,15 @@ namespace rl
           if(!this->solidScene->getCollisionSurfaceNormal(initPoint,collMap.begin()->second.commonPoint,s1,s2,normal))
           {
             //this->viewer->drawLine(initPoint,collMap.begin()->second.commonPoint);
-            std::cout<<"failed to compute normal"<<std::endl;
+            std::cerr<<"failed to compute normal\n"; // for s1: "<< s1.c_str() <<" s2: "<< s2.c_str() <<std::endl;
             return false;
-          }
+          } else { std::cout << "Norm computed \n"; }
 
           if(collMap.size()>1)
           {
-            //std::cout<<"Guarded move ends in a state with two collisions - this should not happen!"<<std::endl;
+            std::cerr<<"Guarded move ends in a state with two collisions - this should not happen! \n begin: "<<collMap.begin()->first.first << ","<< collMap.begin()->first.second << " end: " << collMap.end()->first.first<< "," << collMap.end()->first.second<<std::endl;
             return false;
-          }
+          } else { std::cout << "collision with only one surface \n"; }
 
 
           if (shape1 == "")
